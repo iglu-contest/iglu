@@ -1,6 +1,5 @@
 import os
-# if os.environ.get('MINERL_ENABLE_LOG', '') == '1':
-if True:
+if os.environ.get('MINERL_ENABLE_LOG', '') == '1':
     import sys
     import logging
     logging.getLogger('minerl').setLevel(level=logging.DEBUG)
@@ -18,29 +17,53 @@ from minerl.env._singleagent import _SingleAgentEnv
 from .handlers import AgentPosObservation, \
                       HotBarObservation, \
                       GridObservation, \
-                      CameraAction, \
                       HotBarChoiceAction, \
+                      TargetGridMonitor, \
                       GridIntersectionMonitor
 
-from .const import GROUND_LEVEL, block_map
+from .const import GROUND_LEVEL, block_map, id2block
 from .wrappers import RewardFromInfo
+from .tasks import TaskSet, RandomTasks
 
 
 class IGLUEnv(_SingleAgentEnv):
+    def _init_tasks(self):
+        if not hasattr(self, '_tasks'):
+            self._tasks = TaskSet(preset='one_task', task_id='C8')
+        self.spec._kwargs['env_spec'].task_monitor.tasks = self._tasks
+
+    @property
+    def tasks(self):
+        self._init_tasks()
+        return self.spec._kwargs['env_spec'].task_monitor.tasks
+
+    def update_taskset(self, tasks):
+        self._tasks = tasks
+        self.spec._kwargs['env_spec'].task_monitor.tasks = tasks
+
+    def reset(self):
+        obs = super().reset()
+        self._init_tasks()
+        return obs
+
     def step(self, action):
         obs, reward, done, info = super().step(action)
-        reward = info['task']['reward']
-        done = done or info['task']['done']
-        del info['task']
+        if 'task' not in info: # connection timed out
+            reward = 0
+            done = False
+        else:
+            reward = info['task']['reward']
+            done = done or info['task']['done']
+            del info['task']
         return obs, reward, done, info
 
 
 class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
-    ENTRYPOINT = 'env.env:IGLUEnv'
+    ENTRYPOINT = 'iglu.env:IGLUEnv'
     def __init__(self, *args, **kwargs):
         self.task_monitor = GridIntersectionMonitor(grid_name='build_zone')
         super().__init__(name='IGLUSilentBuilder-v0', *args, max_episode_steps=2000,
-                         resolution=(500, 500), **kwargs)
+                         resolution=(600, 600), **kwargs)
 
     def make(self, **kwargs):
         env = super().make(**kwargs)
@@ -56,12 +79,12 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     def create_agent_start(self):
         # TODO: randomize agent initial position here
         return [
-            handlers.AgentStartPlacement(x=0, y=GROUND_LEVEL + 1, z=0, pitch=0, yaw=0),
+            handlers.AgentStartPlacement(x=-1, y=GROUND_LEVEL + 1, z=0, pitch=0, yaw=-90),
             handlers.InventoryAgentStart({
                 i: {'type': v, 'quantity': 20} for i, v in enumerate(block_map.values())
             })
         ]
-    
+
     def create_agent_handlers(self) -> List[Handler]:
         return []
 
@@ -81,18 +104,24 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
                 allow_spawning=False
             )
         ]
-    
+
     def create_server_decorators(self) -> List[Handler]:
+        grid = self.task_monitor.tasks.current.target_grid
+        blocks_list = list(zip(*grid.nonzero()))
+        block_types = [id2block[grid[idx]] for idx in blocks_list]
+        blocks_str = '\n'.join(f'<DrawBlock type="{btype}" x="{idx[1] - 6}" y="{GROUND_LEVEL + idx[0] + 1}" z="{idx[2] - 5}"/>' 
+                               for idx, btype in zip(blocks_list, block_types))
         return [
             handlers.DrawingDecorator(
                 # f'<DrawCuboid type="iron_block" x1="-5" y1="{GROUND_LEVEL}" z1="-5" x2="5" y2="{GROUND_LEVEL}" z2="5"/>'
-                f'<DrawCuboid type="malmomod:iglu_unbreakable_white_rn" x1="-5" y1="{GROUND_LEVEL}" z1="-5" x2="5" y2="{GROUND_LEVEL}" z2="5"/>'
+                f'<DrawCuboid type="malmomod:iglu_unbreakable_white_rn" x1="-5" y1="{GROUND_LEVEL}" z1="-5" x2="5" y2="{GROUND_LEVEL}" z2="5"/>' 
+                + blocks_str                
             )
         ]
 
     def create_rewardables(self) -> List[Handler]:
         return []
-    
+
     def create_server_quit_producers(self):
         return [
             handlers.ServerQuitFromTimeUp(time_limit_ms=
@@ -105,16 +134,19 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
             AgentPosObservation(),
             HotBarObservation(6),
             GridObservation(
-                grid_name='build_zone', 
+                grid_name='build_zone',
                 min_x=-5, min_y=GROUND_LEVEL + 1, min_z=-5,
                 max_x=5, max_y=GROUND_LEVEL + 9, max_z=5
             ),
         ]
 
     def create_monitors(self):
-        # self.task_monitor.reset()
-        return [self.task_monitor]
-    
+        self.task_monitor.reset()
+        return [
+            self.task_monitor, 
+            TargetGridMonitor(self.task_monitor)
+        ]
+
     def create_actionables(self):
         SIMPLE_KEYBOARD_ACTION = [
             "forward",
@@ -122,8 +154,6 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
             "left",
             "right",
             "jump",
-            # "sneak",
-            # "sprint",
             "attack",
             "use"
         ]
@@ -131,7 +161,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
             handlers.KeybasedCommandAction(k, v) for k, v in INVERSE_KEYMAP.items()
             if k in SIMPLE_KEYBOARD_ACTION
         ] + [
-            handlers.CameraAction(), 
+            handlers.CameraAction(),
             HotBarChoiceAction(6)
         ]
 

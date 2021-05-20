@@ -1,0 +1,4 @@
+*.pyc
+build/*
+dist/*
+iglu.egg-info/*

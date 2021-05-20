@@ -1,9 +1,12 @@
+import logging
 import gym
+# import cv2
 from minerl.herobraine.hero.handlers.agent.actions import camera
 import numpy as np
 import wandb
 from copy import deepcopy
 
+logger = logging.getLogger(__name__)
 
 class ImageOnlyWrapper(gym.Wrapper):
     def __init__(self, env):
@@ -55,12 +58,12 @@ class ActionReductionWrapper(gym.ActionWrapper):
         pass
 
 
-class Discretization(gym.ActionWrapper):
+class Discretization(gym.Wrapper):
     def __init__(self, env, ):
         super().__init__(env)
         camera_delta = 5
         binary = ['attack', 'use', 'forward', 'back', 'left', 'right', 'jump']
-        discretes = []
+        discretes = [env.action_space.no_op()]
         for op in binary:
             dummy = env.action_space.no_op()
             dummy[op] = 1
@@ -84,15 +87,14 @@ class Discretization(gym.ActionWrapper):
         discretes.append(env.action_space.no_op())
         self.discretes = discretes
         self.action_space = gym.spaces.Discrete(len(discretes))
+        self.old_action_space = env.action_space
+        self.last_action = None
 
-    def action(self, action):
-        return self.discretes[action]
-
-    def reverse_action(self, action):
-        pass
-
-import cv2
-import gym
+    def step(self, action):
+        action = self.discretes[action]
+        logger.debug(action)
+        obs, reward, done, info = self.env.step(action)
+        return obs, reward, done, info
 
 class obs_wrapper(gym.Wrapper):
     def __init__(self, env, filename='./mine_videos/vid.mp4', fps=30):
@@ -101,7 +103,7 @@ class obs_wrapper(gym.Wrapper):
         self.fps = fps
         self.frames = []
         self.out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'),
-                                   fps, (500, 500))
+                                   fps, (600, 600))
         # self.observation_space = env.observation_space['pov']
 
     def step(self, action):

@@ -20,7 +20,12 @@ block2id = {
     b: i for i, b in enumerate(['air'] + list(block_map.values()))
 }
 
+id2block = {
+    i: b for i, b in enumerate(['air'] + list(block_map.values()))
+}
+
 BUILD_ZONE_SIZE_X = 11
 BUILD_ZONE_SIZE_Y = 9
 BUILD_ZONE_SIZE_Z = 11
+BUILD_ZONE_SIZE = BUILD_ZONE_SIZE_Y, BUILD_ZONE_SIZE_X, BUILD_ZONE_SIZE_Z
 GROUND_LEVEL = 226

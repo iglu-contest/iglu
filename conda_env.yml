@@ -1,4 +1,4 @@
-name: minerl_env_dev
+name: iglu_env
 channels:
   - pytorch
   - defaults
@@ -120,7 +120,7 @@ dependencies:
     - markdown==3.3.4
     - markupsafe==1.1.1
     - matplotlib==3.0.3
-    - git+git://github.com/minerllabs/minerl.git@8b1d296498601efcc15fce6c561e5f1d03230fd5
+    - git+git://github.com/iglu-contest/minerl
     - msgpack==1.0.2
     - multidict==5.1.0
     - numpy==1.19.5
@@ -189,5 +189,4 @@ dependencies:
     - xmltodict==0.12.0
     - yarl==1.6.3
     - zipp==3.4.1
-prefix: /home/artem/.conda/envs/minerl_env_dev
 
