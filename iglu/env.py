@@ -106,16 +106,9 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         ]
 
     def create_server_decorators(self) -> List[Handler]:
-        grid = self.task_monitor.tasks.current.target_grid
-        blocks_list = list(zip(*grid.nonzero()))
-        block_types = [id2block[grid[idx]] for idx in blocks_list]
-        blocks_str = '\n'.join(f'<DrawBlock type="{btype}" x="{idx[1] - 6}" y="{GROUND_LEVEL + idx[0] + 1}" z="{idx[2] - 5}"/>' 
-                               for idx, btype in zip(blocks_list, block_types))
         return [
             handlers.DrawingDecorator(
-                # f'<DrawCuboid type="iron_block" x1="-5" y1="{GROUND_LEVEL}" z1="-5" x2="5" y2="{GROUND_LEVEL}" z2="5"/>'
                 f'<DrawCuboid type="malmomod:iglu_unbreakable_white_rn" x1="-5" y1="{GROUND_LEVEL}" z1="-5" x2="5" y2="{GROUND_LEVEL}" z2="5"/>' 
-                + blocks_str                
             )
         ]
 
