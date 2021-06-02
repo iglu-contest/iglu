@@ -63,7 +63,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     def __init__(self, *args, **kwargs):
         self.task_monitor = GridIntersectionMonitor(grid_name='build_zone')
         super().__init__(name='IGLUSilentBuilder-v0', *args, max_episode_steps=2000,
-                         resolution=(600, 600), **kwargs)
+                         resolution=(64, 64), **kwargs)
 
     def make(self, **kwargs):
         env = super().make(**kwargs)

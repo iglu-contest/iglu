@@ -1,3 +1,4 @@
+# TODO: remove legacy
 block_map_ = {
     'cwc_minecraft_blue_rn': 'lapis_block',
     'cwc_minecraft_yellow_rn': 'gold_block',
@@ -18,6 +19,12 @@ block_map = {
 
 block2id = {
     b: i for i, b in enumerate(['air'] + list(block_map.values()))
+}
+
+block_short2id = {
+    b: i for i, b in enumerate(['air'] + [
+        v[len('malmomod:'):] for v in block_map.values()
+    ])
 }
 
 id2block = {

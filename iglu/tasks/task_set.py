@@ -35,7 +35,8 @@ class TaskSet:
         'C13': 'Vertical structure that looks like an eye',
         'C14': 'Vertical, diagonal ladder like structure',
         'C15': 'Wide and long bridge from 3 types of blocks',
-        
+        # TODO: add rest
+
         'C17': '3 blocks horizontal L',
         'C32': '5 block vertical L'
     }
@@ -177,7 +178,6 @@ class RandomTasks(TaskSet):
     def sample_task(self):
         chat = ''
         target_grid = np.zeros(BUILD_ZONE_SIZE, dtype=np.int32)
-        # TODO: implement
         for height in range(self.height_levels):
             shape = target_grid[height].shape
             block_x = np.random.choice(BUILD_ZONE_SIZE_X)

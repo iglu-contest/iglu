@@ -2,3 +2,5 @@
 build/*
 dist/*
 iglu.egg-info/*
+*wandb*
+*logs*

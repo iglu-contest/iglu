@@ -9,7 +9,7 @@ import minerl.herobraine.hero.handlers.agent.observations.location_stats as loc_
 
 from .const import BUILD_ZONE_SIZE, \
                    GROUND_LEVEL, \
-                   block_map, block2id
+                   block_map, block2id, block_short2id
 from .tasks import TaskSet, RandomTasks
 
 logger = logging.getLogger(__name__)
@@ -129,7 +129,9 @@ class GridObservation(handlers.TranslationHandler):
         c = Counter()
         c.update(blocks)
         logger.debug(f'grid obs counts: {c}')
-        blocks_id = np.array([block2id.get(block, -1) for block in blocks])
+        blocks_id = np.array([block_short2id.get(block, -1) for block in blocks])
+        if (blocks_id == -1).any().item():
+            logger.warning(f'Wrong block type! grid obs counts: {c}')
         return blocks_id.reshape(*BUILD_ZONE_SIZE)
 
 
@@ -169,7 +171,7 @@ class GridIntersectionMonitor(handlers.TranslationHandler):
 
     def from_hero(self, x):
         blocks = x[self.grid_name]
-        blocks_id = np.array([block2id.get(block, -1) for block in blocks])
+        blocks_id = np.array([block_short2id.get(block, -1) for block in blocks])
         grid = blocks_id.reshape(*BUILD_ZONE_SIZE)
         grid_size = (grid != 0).sum().item()
         wrong_placement = (self.prev_grid_size - grid_size) * self.wrong_scale
