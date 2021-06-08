@@ -75,6 +75,7 @@ class AbsoluteNavigationActions(Action):
         self.bz1 = np.array(self.bz1)
         self.bz2 = np.array(self.bz2)
         self.navigation_commands = {
+            'noop': np.array([0, 0, 0]),
             'movenorth': np.array([0, 0, -1]),
             'movesouth': np.array([0, 0, -1]),
             'moveeast': np.array([1, 0, 0]),
@@ -99,6 +100,8 @@ class AbsoluteNavigationActions(Action):
             x = x.item()
         x_id = x
         x = self.action_map[x]
+        if x == 'noop':
+            return ''
         if x_id < len(self.navigation_commands):
             cmd = self.navigation_commands[x]
             self.pos += cmd
