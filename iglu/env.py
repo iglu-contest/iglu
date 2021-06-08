@@ -19,8 +19,10 @@ from .handlers import AgentPosObservation, \
                       GridObservation, \
                       HotBarChoiceAction, \
                       TargetGridMonitor, \
+                      CameraAction, \
                       GridIntersectionMonitor, \
-                      DiscreteNavigationActions
+                      DiscreteNavigationActions, \
+                      AbsoluteNavigationActions
 
 from .const import GROUND_LEVEL, block_map, id2block
 from .wrappers import RewardFromInfo
@@ -153,7 +155,8 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         ]
 
     def create_actionables(self):
-        return self.discrete_actions()
+        # TODO: introduce a parameter for selection of the action space type
+        return self.absolute_actions()
 
     def discrete_actions(self):
         return [
@@ -163,7 +166,15 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
 
     def absolute_actions(self):
         return [
-            
+            AbsoluteNavigationActions(
+                (0.5, GROUND_LEVEL + 1, 0.5), pitch=0, 
+                yaw=-90, ground_level=GROUND_LEVEL + 1,
+                build_zone=[(-5, GROUND_LEVEL + 1, -5), 
+                            (5, GROUND_LEVEL + 9, 5)]
+            ),
+            CameraAction(),
+            HotBarChoiceAction(6),
+            DiscreteNavigationActions(movement=False, camera=False, placement=True)
         ]
 
     def continuous_actions(self):
