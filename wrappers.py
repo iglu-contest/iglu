@@ -1,6 +1,6 @@
 import logging
 import gym
-# import cv2
+import cv2
 from minerl.herobraine.hero.handlers.agent.actions import camera
 import numpy as np
 import wandb
@@ -97,7 +97,7 @@ class Discretization(gym.Wrapper):
         return obs, reward, done, info
 
 class obs_wrapper(gym.Wrapper):
-    def __init__(self, env, filename='./mine_videos/vid.mp4', fps=30):
+    def __init__(self, env, filename='./mine_videos/vid.mp4', fps=3):
         super().__init__(env)
         self.filename = filename
         self.fps = fps

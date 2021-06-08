@@ -5,6 +5,8 @@ from os.path import join, dirname
 with open("requirements.txt", "r") as fh:
     requirements = fh.read()
 
+# TODO: configure installation of iglu
+
 setup(
     name='iglu',
     version='0.1',
@@ -14,6 +16,6 @@ setup(
         'minerl'
     ],
     dependency_links=[
-        'lib/minerl-0.4.0-patched.tar.gz',
+        'https://github.com/iglu-contest/minerl/releases/download/v0.3.7-patched/minerl-0.4.0-patched.zip',
     ]
 )

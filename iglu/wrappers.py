@@ -8,7 +8,7 @@ class obs_wrapper(gym.Wrapper):
         self.fps = fps
         self.frames = []
         self.out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), 
-                                   fps, (64, 64))
+                                   fps, (600, 600))
         self.observation_space = env.observation_space['pov']
 
     def step(self, action):

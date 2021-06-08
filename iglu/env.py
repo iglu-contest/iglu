@@ -19,7 +19,8 @@ from .handlers import AgentPosObservation, \
                       GridObservation, \
                       HotBarChoiceAction, \
                       TargetGridMonitor, \
-                      GridIntersectionMonitor
+                      GridIntersectionMonitor, \
+                      DiscreteNavigationActions
 
 from .const import GROUND_LEVEL, block_map, id2block
 from .wrappers import RewardFromInfo
@@ -37,9 +38,17 @@ class IGLUEnv(_SingleAgentEnv):
         self._init_tasks()
         return self.spec._kwargs['env_spec'].task_monitor.tasks
 
+    @property
+    def current_task(self):
+        self._init_tasks()
+        return self.spec._kwargs['env_spec'].task_monitor.current_task
+
     def update_taskset(self, tasks):
         self._tasks = tasks
         self.spec._kwargs['env_spec'].task_monitor.tasks = tasks
+    
+    def set_task(self, task_id):
+        self.spec._kwargs['env_spec'].task_monitor.set_task(task_id)
 
     def reset(self):
         obs = super().reset()
@@ -63,7 +72,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     def __init__(self, *args, **kwargs):
         self.task_monitor = GridIntersectionMonitor(grid_name='build_zone')
         super().__init__(name='IGLUSilentBuilder-v0', *args, max_episode_steps=2000,
-                         resolution=(64, 64), **kwargs)
+                         resolution=(600, 600), **kwargs)
 
     def make(self, **kwargs):
         env = super().make(**kwargs)
@@ -76,10 +85,13 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     def is_from_folder(self, folder: str) -> bool:
         return folder == 'survivaltreechop'
 
+    def create_agent_mode(self):
+        return "Creative"
+
     def create_agent_start(self):
         # TODO: randomize agent initial position here
         return [
-            handlers.AgentStartPlacement(x=-1, y=GROUND_LEVEL + 1, z=0, pitch=0, yaw=-90),
+            handlers.AgentStartPlacement(x=0.5, y=GROUND_LEVEL + 1, z=0.5, pitch=0, yaw=-90),
             handlers.InventoryAgentStart({
                 i: {'type': v, 'quantity': 20} for i, v in enumerate(block_map.values())
             })
@@ -141,6 +153,20 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         ]
 
     def create_actionables(self):
+        return self.discrete_actions()
+
+    def discrete_actions(self):
+        return [
+            DiscreteNavigationActions(),
+            HotBarChoiceAction(6)
+        ]
+
+    def absolute_actions(self):
+        return [
+            
+        ]
+
+    def continuous_actions(self):
         SIMPLE_KEYBOARD_ACTION = [
             "forward",
             "back",

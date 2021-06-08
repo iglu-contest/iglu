@@ -1,6 +1,7 @@
 from collections import Counter
 import logging
 import numpy as np
+from typing import Union
 
 from minerl.herobraine.hero.handlers.agent.action import Action
 from minerl.herobraine.hero import spaces
@@ -13,6 +14,7 @@ from .const import BUILD_ZONE_SIZE, \
 from .tasks import TaskSet, RandomTasks
 
 logger = logging.getLogger(__name__)
+
 
 class HotBarChoiceAction(Action):
     def __init__(self, n):
@@ -47,6 +49,149 @@ class CameraAction(Action):
     def __init__(self):
         self._command = 'camera'
         super().__init__(self.command, spaces.Box(low=-5, high=5, shape=[2], dtype=np.float32))
+
+
+class AbsoluteNavigationActions(Action):
+    def xml_template(self) -> str:
+        return str("""<AbsoluteMovementCommands>
+            <ModifierList type="allow-list">
+            {% for command in commands %}
+            <command>{{ command }}</command>
+            {% endfor %}
+            </ModifierList>
+            </AbsoluteMovementCommands>
+            """
+        )
+
+    def __init__(self, position, pitch, yaw, ground_level, build_zone):
+        self.commands = [
+            'tp', #'setPitch', 'setYaw'
+        ]
+        self.ground_level = ground_level
+        self.pos = np.array(list(position))
+        self.pitch = pitch
+        self.yaw = yaw
+        self.bz1, self.bz2 = build_zone
+        self.bz1 = np.array(self.bz1)
+        self.bz2 = np.array(self.bz2)
+        self.navigation_commands = {
+            'movenorth': np.array([0, 0, -1]),
+            'movesouth': np.array([0, 0, -1]),
+            'moveeast': np.array([1, 0, 0]),
+            'movewest': np.array([-1, 0, 0]),
+            'up': np.array([0, 1, 0]),
+            'down': np.array([0, -1, 0]),
+        }
+        self.action_map = list(self.navigation_commands.keys())
+        self.inverse_map = {
+            v: i for i, v in enumerate(self.action_map)
+        }
+        super().__init__('abs_navigation', spaces.Discrete(
+            len(self.action_map)))
+
+    def to_hero(self, x: Union[int, np.int]):
+        """
+        Returns a command string for the multi command action.
+        :param x:
+        :return:
+        """
+        if not isinstance(x, int):
+            x = x.item()
+        x_id = x
+        x = self.action_map[x]
+        if x_id < len(self.navigation_commands):
+            cmd = self.navigation_commands[x]
+            self.pos += cmd
+            self.pos = np.maximum(self.pos, self.bz1)
+            self.pos = np.minimum(self.pos, self.bz2)
+            self.pos[1] = max(self.pos[1], self.ground_level)
+            coord = ' '.join(map(str, self.pos.tolist()))
+            cmd = f'tp {coord}'
+        else:
+            cmd = self.camera_commands[x]
+            pitch_delta, yaw_delta = cmd
+            self.pitch = np.clip(self.pitch + pitch_delta, -90, 90)
+            self.yaw = (self.yaw + yaw_delta) % 360
+            cmd = f'setPitch {self.pitch}\nsetYaw {self.yaw}'
+        return cmd
+
+class DiscreteNavigationActions(Action):
+    def xml_template(self) -> str:
+        return str("""<DiscreteMovementCommands>
+            <ModifierList type="allow-list">
+            {% for command in commands %}
+            <command>{{ command }}</command>
+            {% endfor %}
+            </ModifierList>
+            </DiscreteMovementCommands>
+            """
+        )
+
+    def __init__(self, movement=True, camera=True, placement=True):
+        self.commands = []
+        if movement:
+            self.commands += ['move', 'jumpmove', 'strafe', 'jumpstrafe']
+        if camera:
+            self.commands += ['turn', 'look']
+        if placement:
+            self.commands += ['attack', 'use']
+        self.angle = 0
+        self.action_map = [
+            '', # no-op
+        ]
+        if movement:
+            self.action_map += [
+                'move 1',
+                'move -1',
+                'jumpmove 1',
+                'jumpmove -1',
+                'strafe 1',
+                'strafe -1',
+                'jumpstrafe 1',
+                'jumpstrafe -1',
+            ]
+        if camera:
+            self.action_map += [
+                'turn 1',
+                'turn -1',
+                'look 1',
+                'look -1',    
+            ]
+        if placement:
+            self.action_map = [
+                'attack 1',
+                'use 1'
+            ]
+        self.inverse_map = {
+            v: i for i, v in enumerate(self.action_map)
+        }
+        super().__init__('navigation', spaces.Discrete(len(self.action_map)))
+
+    def _is_look_command(self, action_id):
+        return 'look' in self.action_map[action_id] 
+    
+    def to_hero(self, x: Union[int, np.int]):
+        """
+        Returns a command string for the multi command action.
+        :param x:
+        :return:
+        """
+        if not isinstance(x, int):
+            x = x.item()
+        cmd = self.action_map[x]
+        if self._is_look_command(x):
+            delta = int(cmd[len('look '):])
+            if (self.angle ==  2 and delta ==  1
+             or self.angle == -2 and delta == -1):
+                # each look 1/-1 action turns agent's camera upwards or downwards
+                # by 45 degrees.
+                # due to hacky way of DiscreteMovementCommands implementation
+                # this doesn't have upper or lower bounds and agent can therefore turn
+                # upside down. By this we disallow agent to "roll"
+                cmd = '' 
+            else:
+                self.angle += delta
+        return cmd
 
 
 class HotBarObservation(handlers.FlatInventoryObservation):
@@ -162,10 +307,15 @@ class GridIntersectionMonitor(handlers.TranslationHandler):
         self.tasks = TaskSet(preset='one_task', task_id='C8')
         self.prev_grid_size = 0
         self.max_int = 0
-        super().__init__(space=spaces.Box(low=-1, high=1, shape=()))
+        super().__init__(space=spaces.Box(low=-2, high=2, shape=()))
 
     def reset(self):
         self.current_task = self.tasks.sample()
+        self.prev_grid_size = 0
+        self.max_int = 0
+
+    def set_task(self, task_id):
+        self.current_task = self.tasks.set_task(task_id)
         self.prev_grid_size = 0
         self.max_int = 0
 

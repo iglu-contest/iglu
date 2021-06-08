@@ -27,12 +27,5 @@ ENV CONDA_DEFAULT_ENV=py37
 ENV CONDA_PREFIX=/home/builder/miniconda/envs/$CONDA_DEFAULT_ENV
 ENV PATH=$CONDA_PREFIX/bin:$PATH
 
-#ADD .netrc /home/builder/
 
-RUN conda install -c crowdai malmo
-RUN pip install  numpy scipy matplotlib jupyterlab scikit-learn \ 
-    gym "ray[rllib]==1.0.1" pandas tensorflow-gpu==2.3.0 chainerrl \
-    marlo wandb moviepy transformers
-RUN conda install pytorch=1.8.1 torchvision cudatoolkit=11.1 -c pytorch -c nvidia
-#RUN conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
 

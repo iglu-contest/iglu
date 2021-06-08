@@ -4,3 +4,4 @@ dist/*
 iglu.egg-info/*
 *wandb*
 *logs*
+.vscode/*

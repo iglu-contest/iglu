@@ -2,6 +2,8 @@ import os
 import re
 import json
 import shutil
+import pickle
+import uuid
 from zipfile import ZipFile
 from collections import defaultdict
 
@@ -150,11 +152,21 @@ class RandomTasks(TaskSet):
         self.max_dist = max_dist
         self.num_colors = num_colors
         self.max_cache = max_cache
-        self.preset = []
+        self.preset = {}
+        self.current = None
         for _ in range(self.max_cache):
-            self.preset.append(self.sample_task())
-        if self.max_cache == 0:
-            self.sample()
+            uid = str(uuid.uuid1())[:8]
+            self.preset[uid] = self.sample_task()
+        self.sample()
+
+    def dump(self, path):
+        with open(path, 'wb') as f:
+            pickle.dump({uid: t.target_grid for uid, t in self.preset.items()}, f)
+
+    def load(self, path):
+        with open(path, 'rb') as f:
+            grids = pickle.load(f)
+        self.preset = {uid: Task('', g) for uid, g in grids.items()}
 
     def __repr__(self):
         hps = dict(
@@ -170,10 +182,17 @@ class RandomTasks(TaskSet):
 
     def sample(self):
         if self.max_cache > 0:
-            return super().sample()
+            sample = np.random.choice(list(self.preset.keys()))
+            self.current = self.preset[sample]
+            self.current_id = sample
+            return self.current
         else:
             self.current = self.sample_task()
             return self.current
+
+    def set_task(self, task_id):
+        self.current = self.preset[task_id]
+        return self.current
 
     def sample_task(self):
         chat = ''
