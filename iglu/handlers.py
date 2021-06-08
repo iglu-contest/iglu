@@ -158,7 +158,7 @@ class DiscreteNavigationActions(Action):
                 'look -1',    
             ]
         if placement:
-            self.action_map = [
+            self.action_map += [
                 'attack 1',
                 'use 1'
             ]
