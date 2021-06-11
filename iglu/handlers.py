@@ -51,6 +51,14 @@ class CameraAction(Action):
         super().__init__(self.command, spaces.Box(low=-5, high=5, shape=[2], dtype=np.float32))
 
 
+class FakeResetAction(Action):
+    def xml_template(self) -> str:
+        return str("<FakeResetCommand/>")
+
+    def __init__(self):
+        super().__init__('fake_reset', spaces.Discrete(2))
+
+
 class AbsoluteNavigationActions(Action):
     def xml_template(self) -> str:
         return str("""<AbsoluteMovementCommands>
@@ -110,12 +118,6 @@ class AbsoluteNavigationActions(Action):
             self.pos[1] = max(self.pos[1], self.ground_level)
             coord = ' '.join(map(str, self.pos.tolist()))
             cmd = f'tp {coord}'
-        else:
-            cmd = self.camera_commands[x]
-            pitch_delta, yaw_delta = cmd
-            self.pitch = np.clip(self.pitch + pitch_delta, -90, 90)
-            self.yaw = (self.yaw + yaw_delta) % 360
-            cmd = f'setPitch {self.pitch}\nsetYaw {self.yaw}'
         return cmd
 
 class DiscreteNavigationActions(Action):
