@@ -6,12 +6,10 @@ import numpy as np
 from time import time
 from collections import defaultdict
 import iglu
-from iglu.env import FakeResetWrapper
 from iglu.tasks import RandomTasks, TaskSet
 import sys
 from tqdm import tqdm
-from wrappers import Discretization, VectorObsWrapper, obs_wrapper
-import logging 
+import logging
 
 if __name__ == '__main__':
     env = gym.make('IGLUSilentBuilder-v0', max_steps=1000)
