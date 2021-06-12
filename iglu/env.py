@@ -78,18 +78,19 @@ class IGLUEnv(_SingleAgentEnv):
         if self._should_reset:
             obs = self.real_reset()
         else:
-            self.spec._kwargs['env_spec'].task_monitor.reset()
             fake_reset_action = self.action_space.no_op()
             fake_reset_action['fake_reset'] = 1
             obs, _, done, _ = super().step(fake_reset_action)
             # since this action is handled by minecraft server
-            # we need one extra noop action
-            if not done:
-                obs, _, done, _ = super().step(self.action_space.no_op())
-            else:
-                return self.real_reset()
+            # we need some extra noop actions
+            for _ in range(3):
+                if not done:
+                    obs, _, done, _ = super().step(self.action_space.no_op())
+                else:
+                    return self.real_reset()
             if done:
                 return self.real_reset()
+        self.spec._kwargs['env_spec'].task_monitor.reset()
         return obs
 
     def real_reset(self):
