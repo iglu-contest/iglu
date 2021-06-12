@@ -76,8 +76,7 @@ class IGLUEnv(_SingleAgentEnv):
         self.counter = 0
         self._init_tasks()
         if self._should_reset:
-            obs = super().reset()
-            self.should_reset(False)
+            obs = self.real_reset()
         else:
             self.spec._kwargs['env_spec'].task_monitor.reset()
             fake_reset_action = self.action_space.no_op()
@@ -204,9 +203,12 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         return self.discrete_actions()
 
     def discrete_actions(self):
+        discrete = DiscreteNavigationActions(movement=True, camera=False, placement=True)
+        camera = CameraAction()
+        discrete.camera_commands = camera
         return [
-            DiscreteNavigationActions(movement=True, camera=False, placement=True),
-            CameraAction(),
+            discrete,
+            camera,
             HotBarChoiceAction(6),
             FakeResetAction(),
         ]

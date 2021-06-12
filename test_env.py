@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, '/home/artem/experiments/rl/minerl/iglu_minerl/')
 import iglu
 import minerl
 import pickle
@@ -5,11 +7,9 @@ import gym
 import numpy as np
 from time import time
 from collections import defaultdict
-from iglu.env import FakeResetWrapper
 from iglu.tasks import RandomTasks, TaskSet
 import sys
 from tqdm import tqdm
-from wrappers import Discretization, VectorObsWrapper, obs_wrapper
 import logging
 
 if __name__ == '__main__':
