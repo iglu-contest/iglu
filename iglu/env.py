@@ -106,7 +106,8 @@ class IGLUEnv(_SingleAgentEnv):
         obs, reward, done, info = super().step(action)
         if 'task' not in info: # connection timed out
             reward = 0
-            done = False
+            done = True
+            self.should_reset(True)
         else:
             reward = info['task']['reward']
             done = done or info['task']['done']
