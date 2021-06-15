@@ -56,7 +56,7 @@ class IGLUEnv(_SingleAgentEnv):
     @property
     def _should_reset(self):
         return self._should_reset_val
-    
+
     def should_reset(self, value: bool):
         self._should_reset_val = value
 
@@ -68,14 +68,14 @@ class IGLUEnv(_SingleAgentEnv):
     def update_taskset(self, tasks):
         self._tasks = tasks
         self.spec._kwargs['env_spec'].task_monitor.tasks = tasks
-    
+
     def set_task(self, task_id):
         self.spec._kwargs['env_spec'].task_monitor.set_task(task_id)
 
     def reset(self):
         self.counter = 0
         self._init_tasks()
-        if self._should_reset:
+        if self._should_reset or os.environ.get('IGLU_DISABLE_FAKE_RESET', '0') == '1':
             obs = self.real_reset()
         else:
             fake_reset_action = self.action_space.no_op()
@@ -133,7 +133,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         return folder == 'survivaltreechop'
 
     def create_agent_mode(self):
-        return "Creative"
+        return "Survival"
 
     def create_agent_start(self):
         # TODO: randomize agent initial position here
@@ -167,7 +167,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     def create_server_decorators(self) -> List[Handler]:
         return [
             handlers.DrawingDecorator(
-                f'<DrawCuboid type="malmomod:iglu_unbreakable_white_rn" x1="-5" y1="{GROUND_LEVEL}" z1="-5" x2="5" y2="{GROUND_LEVEL}" z2="5"/>' 
+                f'<DrawCuboid type="malmomod:iglu_unbreakable_white_rn" x1="-5" y1="{GROUND_LEVEL}" z1="-5" x2="5" y2="{GROUND_LEVEL}" z2="5"/>'
             )
         ]
 
@@ -195,7 +195,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     def create_monitors(self):
         self.task_monitor.reset()
         return [
-            self.task_monitor, 
+            self.task_monitor,
             TargetGridMonitor(self.task_monitor)
         ]
 
@@ -203,6 +203,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         # TODO: introduce a parameter for selection of the action space type
         # return self.absolute_actions()
         return self.discrete_actions()
+        #return self.continuous_actions()
 
     def discrete_actions(self):
         discrete = DiscreteNavigationActions(movement=True, camera=False, placement=True)
@@ -218,9 +219,9 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     def absolute_actions(self):
         return [
             AbsoluteNavigationActions(
-                (0.5, GROUND_LEVEL + 1, 0.5), pitch=0, 
+                (0.5, GROUND_LEVEL + 1, 0.5), pitch=0,
                 yaw=-90, ground_level=GROUND_LEVEL + 1,
-                build_zone=[(-5, GROUND_LEVEL + 1, -5), 
+                build_zone=[(-5, GROUND_LEVEL + 1, -5),
                             (5, GROUND_LEVEL + 9, 5)]
             ),
             CameraAction(),
@@ -244,7 +245,8 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
             if k in SIMPLE_KEYBOARD_ACTION
         ] + [
             handlers.CameraAction(),
-            HotBarChoiceAction(6)
+            HotBarChoiceAction(6),
+            FakeResetAction(),
         ]
 
     def determine_success_from_rewards(self, rewards: list) -> bool:
