@@ -244,7 +244,8 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
             if k in SIMPLE_KEYBOARD_ACTION
         ] + [
             handlers.CameraAction(),
-            HotBarChoiceAction(6)
+            HotBarChoiceAction(6),
+            FakeResetAction()
         ]
 
     def determine_success_from_rewards(self, rewards: list) -> bool:

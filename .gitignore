@@ -2,6 +2,8 @@
 build/*
 dist/*
 iglu.egg-info/*
+docs/source/auto/*
+docs/build/*
 *wandb*
 *logs*
 .vscode/*

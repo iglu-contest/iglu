@@ -2,9 +2,11 @@ import os
 import re
 import json
 import shutil
+import sys
 import pickle
 import uuid
 from zipfile import ZipFile
+import pandas as pd
 from collections import defaultdict
 
 import numpy as np
@@ -42,12 +44,17 @@ class TaskSet:
         'C17': '3 blocks horizontal L',
         'C32': '5 block vertical L'
     }
-    def __init__(self, preset='simplest', task_id=None):
-        self._load_data(force_download=os.environ.get('IGLU_FORCE_DOWNLOAD', '0') == '1')
+    ALL = {}
+    def __init__(self, preset='simplest', task_id=None, update_task_dict=False):
+        self._load_data(
+            force_download=os.environ.get('IGLU_FORCE_DOWNLOAD', '0') == '1',
+            update_task_dict=update_task_dict)
         self.tasks = self._parse_data()
         self.preset = []
         task_set = None
-        if preset == 'simplest':
+        if isinstance(preset, list):
+            task_set = preset
+        elif preset == 'simplest':
             task_set = SIMPLEST_TASKS
         elif preset == 'one_task':
             task_set = [task_id]
@@ -56,8 +63,10 @@ class TaskSet:
         self.task_ids = task_set
         self.current = None
         for task_id in task_set:
+            if len(self.tasks[task_id]) == 0:
+                continue
             task_path = os.path.join(DATA_PREFIX, self.tasks[task_id][0][0], 'logs', self.tasks[task_id][0][1])
-            task = Task(*self._parse_task(task_path))
+            task = Task(*self._parse_task(task_path, task_id, update_task_dict=update_task_dict))
             self.preset.append(task)
         
     def sample(self):
@@ -65,7 +74,12 @@ class TaskSet:
         self.current = self.preset[sample]
         return self.current
 
-    def _load_data(self, force_download=False):
+    def _load_data(self, force_download=False, update_task_dict=False):
+        if update_task_dict:
+            path = sys.modules[__name__].__file__
+            path_dir, _ = os.path.split(path)
+            tasks = pd.read_csv(os.path.join(path_dir, 'task_names.txt'), sep='\t', names=['task_id', 'name'])
+            TaskSet.ALL = dict(tasks.to_records(index=False))
         if not os.path.exists(DATA_PREFIX):
             os.makedirs(DATA_PREFIX, exist_ok=True)
         path = os.path.join(DATA_PREFIX, 'data.zip')
@@ -109,7 +123,7 @@ class TaskSet:
                         tasks[re.search(r'C\d+', task_id).group()].append((folder, task_id.strip()))
         return tasks
 
-    def _parse_task(self, path):
+    def _parse_task(self, path, task_id, update_task_dict=False):
         if not os.path.exists(path):
             # try to unzip logs.zip
             path_prefix, top = path, ''
@@ -129,6 +143,10 @@ class TaskSet:
                 coord['X'] + 5,
                 coord['Z'] + 5
             ] = block2id[block_map[block['Type']]]
+        if update_task_dict:
+            total_blocks = len(data['BlocksInGrid'])
+            colors = len(np.unique([b['Type'] for b in data['BlocksInGrid']]))
+            TaskSet.ALL[task_id] = f'{TaskSet.ALL[task_id]} ({total_blocks} blocks, {colors} colors)'
         return chat, target_grid
 
     def __repr__(self):
@@ -141,11 +159,23 @@ class TaskSet:
 
 
 class RandomTasks(TaskSet):
+    """ 
+    TaskSet that consists of number of randomly generated tasks
+
+    Args:
+        max_blocks (``int``): The maximal number of blocks in each task. Defaults to 3.
+        height_levels (``int``): How many height levels random blocks can occupy. Defaults to 1.
+        allow_float (``bool``): Whether to allow blocks to have the air below. Defaults to False.
+        max_dist (``int``): Maximum (Chebyshev) distance between two blocks. Defaults to 2.
+        num_colors (``int``): Maximum number of unique colors. Defaults to 1.
+        max_cache (``int``): If zero, each `.sample_task` will generate new task. Otherwise, the number of random tasks to cache. Defaults to 0.
+
+    """
     def __init__(
-        self, max_blocks=3,
+        self, max_blocks=4,
         height_levels=1, allow_float=False, max_dist=2, 
         num_colors=1, max_cache=0, 
-    ):
+    ): 
         self.height_levels = height_levels
         self.max_blocks = max_blocks
         self.allow_float = allow_float
