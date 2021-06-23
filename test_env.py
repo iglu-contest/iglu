@@ -1,8 +1,7 @@
-import sys
-sys.path.insert(0, '/home/artem/experiments/rl/minerl/iglu_minerl/')
 import iglu
 import minerl
 import pickle
+import json
 import gym
 import numpy as np
 from time import time
@@ -13,7 +12,7 @@ from tqdm import tqdm
 import logging
 
 if __name__ == '__main__':
-    env = gym.make('IGLUSilentBuilder-v0', max_steps=1000)
+    env = gym.make('IGLUSilentBuilderVisual-v0', action_space='discrete')
     print(f'action space: {env.action_space}')
     print(f'observation space: {env.observation_space}')
     print(f'env tasks: {env.tasks}')
@@ -24,15 +23,17 @@ if __name__ == '__main__':
     step = 1
     global_step = 0
     t = time()
-    for i in range(20):
+    action = None
+    for i in range(1):
         while not done:
             action = env.action_space.sample()
             obs, reward, done, info = env.step(action)
+
             total_reward += reward
             tq.update(1)
             step += 1
             global_step += 1
-        env.reset()
+        robs = env.reset()
         done = False
         step = 1
         tq.close()

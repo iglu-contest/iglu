@@ -33,18 +33,37 @@ from .tasks import TaskSet, RandomTasks
 
 
 class IGLUEnv(_SingleAgentEnv):
-    def __init__(self, *args, max_steps=500, **kwargs) -> None:
+    def __init__(self, *args, max_steps=500, action_space='human-level', **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.action_space_type = action_space
         self._tasks = TaskSet(preset='one_task', task_id='C8')
         self.max_steps = max_steps
         self._should_reset_val = True
         self.counter = 0
-        self.action_space = Dict({
-            k: v for k, v in self.action_space.spaces.items()
-            if k != 'fake_reset'
-        })
-        print()
+        kwargs['env_spec'].action_space_type = action_space
+        self.action_space_ = None
 
+    @property
+    def action_space(self):
+        if self.action_space_ is None:
+            self.task.actionables = self.task.create_actionables()
+            self.task._action_space = self.task.create_action_space()
+            action_space = self.task.action_space
+            self.action_space_ = Dict({
+                k: v for k, v in action_space.spaces.items()
+                if k != 'fake_reset'
+            })
+        return self.action_space_
+    
+    @action_space.setter
+    def action_space(self, new_space):
+        self.action_space_ = new_space
+        if 'fake_reset' in self.action_space_.spaces:
+            self.action_space_ = Dict({
+                k: v for k, v in self.action_space_.spaces.items()
+                if k != 'fake_reset'
+            })
+        
     def _init_tasks(self):
         self.spec._kwargs['env_spec'].task_monitor.tasks = self._tasks
 
@@ -121,19 +140,25 @@ class IGLUEnv(_SingleAgentEnv):
 
 class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     ENTRYPOINT = 'iglu.env:IGLUEnv'
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, iglu_evaluation=False, ation_space='human-level', **kwargs):
+        self.iglu_evaluation = iglu_evaluation
+        self.action_space_type = ation_space
         self.task_monitor = GridIntersectionMonitor(grid_name='build_zone')
-        super().__init__(name='IGLUSilentBuilder-v0', *args, max_episode_steps=30000,
+        if iglu_evaluation:
+            name = 'IGLUSilentBuilder-v0'
+        else:
+            name = 'IGLUSilentBuilderVisual-v0'
+        super().__init__(name=name, *args, max_episode_steps=30000,
                          resolution=(64, 64), **kwargs)
 
     def _entry_point(self, fake: bool) -> str:
         return IGLUEnvSpec.ENTRYPOINT
 
     def is_from_folder(self, folder: str) -> bool:
-        return folder == 'survivaltreechop'
+        return False
 
     def create_agent_mode(self):
-        return "Creative"
+        return "Survival"
 
     def create_agent_start(self):
         # TODO: randomize agent initial position here
@@ -178,31 +203,48 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         return [
             handlers.ServerQuitFromTimeUp(time_limit_ms=
                                           self.max_episode_steps * MS_PER_STEP),
-            handlers.ServerQuitWhenAnyAgentFinishes()]
+            handlers.ServerQuitWhenAnyAgentFinishes()
+        ]
 
     def create_observables(self) -> List[Handler]:
-        return [
-            handlers.POVObservation(self.resolution),
-            AgentPosObservation(),
-            HotBarObservation(6),
-            GridObservation(
-                grid_name='build_zone',
-                min_x=-5, min_y=GROUND_LEVEL + 1, min_z=-5,
-                max_x=5, max_y=GROUND_LEVEL + 9, max_z=5
-            ),
-        ]
+        if self.iglu_evaluation:
+            return [
+                handlers.POVObservation(self.resolution),
+                AgentPosObservation(),
+                HotBarObservation(6),
+                GridObservation(
+                    grid_name='build_zone',
+                    min_x=-5, min_y=GROUND_LEVEL + 1, min_z=-5,
+                    max_x=5, max_y=GROUND_LEVEL + 9, max_z=5
+                ),
+            ]
+        else:
+            return [
+                handlers.POVObservation(self.resolution),
+                HotBarObservation(6),
+                GridObservation(
+                    grid_name='build_zone',
+                    min_x=-5, min_y=GROUND_LEVEL + 1, min_z=-5,
+                    max_x=5, max_y=GROUND_LEVEL + 9, max_z=5
+                )
+            ]
 
     def create_monitors(self):
         self.task_monitor.reset()
-        return [
+        monitors = [
             self.task_monitor, 
-            TargetGridMonitor(self.task_monitor)
         ]
+        if not self.iglu_evaluation:
+            monitors.append(TargetGridMonitor(self.task_monitor))
+        return monitors
 
     def create_actionables(self):
-        # TODO: introduce a parameter for selection of the action space type
-        # return self.absolute_actions()
-        return self.discrete_actions()
+        if self.action_space_type == 'discrete':
+            return self.discrete_actions()
+        elif self.action_space_type == 'absolute':
+            return self.absolute_actions()
+        elif self.action_space_type == 'human-level':
+            return self.humal_level_actions()
 
     def discrete_actions(self):
         discrete = DiscreteNavigationActions(movement=True, camera=False, placement=True)
@@ -229,7 +271,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
             FakeResetAction(),
         ]
 
-    def continuous_actions(self):
+    def humal_level_actions(self):
         SIMPLE_KEYBOARD_ACTION = [
             "forward",
             "back",
@@ -245,7 +287,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         ] + [
             handlers.CameraAction(),
             HotBarChoiceAction(6),
-            FakeResetAction()
+            FakeResetAction(),
         ]
 
     def determine_success_from_rewards(self, rewards: list) -> bool:
@@ -255,5 +297,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         pass
 
 
-env = IGLUEnvSpec()
+env = IGLUEnvSpec(iglu_evaluation=False)
 env.register()
+eval_env = IGLUEnvSpec(iglu_evaluation=True)
+eval_env.register()
