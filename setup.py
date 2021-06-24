@@ -14,7 +14,8 @@ setup(
     packages=find_packages(exclude=['test', 'test.*']),
     long_description='',
     install_requires=[
-        'minerl'
+        'minerl',
+        'pandas'
     ],
     dependency_links=[
         'https://github.com/iglu-contest/minerl/releases/download/v0.3.7-patched/minerl-0.4.0-patched.zip',
