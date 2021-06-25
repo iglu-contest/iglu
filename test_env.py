@@ -12,7 +12,7 @@ from tqdm import tqdm
 import logging
 
 if __name__ == '__main__':
-    env = gym.make('IGLUSilentBuilderVisual-v0', action_space='discrete')
+    env = gym.make('IGLUSilentBuilder-v0', action_space='discrete')
     print(f'action space: {env.action_space}')
     print(f'observation space: {env.observation_space}')
     print(f'env tasks: {env.tasks}')

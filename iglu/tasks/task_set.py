@@ -23,34 +23,13 @@ DATA_PREFIX = os.path.join(os.environ['HOME'], '.iglu', 'data')
 
 
 class TaskSet:
-    ALL = {
-        'C1': 'Large bell',
-        'C2': 'Two-circle ring floating in the air (black hole)',
-        'C3': 'L-shaped structure from 3 blue blocks',
-        'C4': 'horizontally lying flower from 4 types of blocks',
-        'C5': 'two vertical overlapping chainlinks',
-        'C6': 'four horizontally joined chainlinks',
-        'C7': 'Large scissors floating in the air',
-        'C8': 'A small table from 10 blocks',
-        'C9': 'Very large horizontal star (asterisk)',
-        'C10': 'Three vertical bridges on top of each other',
-        'C11': 'Large heart speared by arrow',
-        'C12': 'diagonal structure of Ls of each color',
-        'C13': 'Vertical structure that looks like an eye',
-        'C14': 'Vertical, diagonal ladder like structure',
-        'C15': 'Wide and long bridge from 3 types of blocks',
-        # TODO: add rest
-
-        'C17': '3 blocks horizontal L',
-        'C32': '5 block vertical L'
-    }
     ALL = {}
     def __init__(self, preset='simplest', task_id=None, update_task_dict=False):
         self._load_data(
             force_download=os.environ.get('IGLU_FORCE_DOWNLOAD', '0') == '1',
             update_task_dict=update_task_dict)
         self.tasks = self._parse_data()
-        self.preset = []
+        self.preset = {}
         task_set = None
         if isinstance(preset, list):
             task_set = preset
@@ -67,11 +46,15 @@ class TaskSet:
                 continue
             task_path = os.path.join(DATA_PREFIX, self.tasks[task_id][0][0], 'logs', self.tasks[task_id][0][1])
             task = Task(*self._parse_task(task_path, task_id, update_task_dict=update_task_dict))
-            self.preset.append(task)
+            self.preset[task_id] = task
         
     def sample(self):
-        sample = np.random.choice(len(self.preset))
-        self.current = self.preset[sample]
+        sample = np.random.choice(len(self.task_ids))
+        self.current = self.preset[self.task_ids[sample]]
+        return self.current
+
+    def set_task(self, task_id):
+        self.current = self.preset[task_id]
         return self.current
 
     def _load_data(self, force_download=False, update_task_dict=False):

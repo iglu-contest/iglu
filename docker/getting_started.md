@@ -8,7 +8,7 @@ you are using [nvidia-container-runtime](https://github.com/NVIDIA/nvidia-contai
 To get the most recent image, pull that using 
 
 ```bash
-docker pull <here-will-be-iglu-org>/iglu:latest
+docker pull iglucontest/env:latest
 ```
 
 Alternatively, you can build images manually:

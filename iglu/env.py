@@ -145,9 +145,9 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         self.action_space_type = ation_space
         self.task_monitor = GridIntersectionMonitor(grid_name='build_zone')
         if iglu_evaluation:
-            name = 'IGLUSilentBuilder-v0'
-        else:
             name = 'IGLUSilentBuilderVisual-v0'
+        else:
+            name = 'IGLUSilentBuilder-v0'
         super().__init__(name=name, *args, max_episode_steps=30000,
                          resolution=(64, 64), **kwargs)
 
@@ -207,7 +207,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         ]
 
     def create_observables(self) -> List[Handler]:
-        if self.iglu_evaluation:
+        if not self.iglu_evaluation:
             return [
                 handlers.POVObservation(self.resolution),
                 AgentPosObservation(),
