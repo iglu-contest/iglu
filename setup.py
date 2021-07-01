@@ -18,6 +18,6 @@ setup(
         'pandas'
     ],
     dependency_links=[
-        'https://github.com/iglu-contest/minerl/releases/download/v0.3.7-patched/minerl-0.4.0-patched.zip',
+        'https://github.com/iglu-contest/minerl/releases/download/v0.3.7-patched/minerl_patched-0.4.0.zip',
     ]
 )
