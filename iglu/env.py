@@ -2,20 +2,20 @@ import os
 if os.environ.get('MINERL_ENABLE_LOG', '') == '1':
     import sys
     import logging
-    logging.getLogger('minerl').setLevel(level=logging.DEBUG)
+    logging.getLogger('minerl_patched').setLevel(level=logging.DEBUG)
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)
-    logging.getLogger('minerl').addHandler(handler)
+    logging.getLogger('minerl_patched').addHandler(handler)
 
 import gym
 from gym import spaces
 from typing import List
-from minerl.herobraine.env_specs.simple_embodiment import SimpleEmbodimentEnvSpec
-from minerl.herobraine.hero.mc import MS_PER_STEP, INVERSE_KEYMAP
-import minerl.herobraine.hero.handlers as handlers
-from minerl.herobraine.hero.spaces import Dict
-from minerl.herobraine.hero.handler import Handler
-from minerl.env._singleagent import _SingleAgentEnv
+from minerl_patched.herobraine.env_specs.simple_embodiment import SimpleEmbodimentEnvSpec
+from minerl_patched.herobraine.hero.mc import MS_PER_STEP, INVERSE_KEYMAP
+import minerl_patched.herobraine.hero.handlers as handlers
+from minerl_patched.herobraine.hero.spaces import Dict
+from minerl_patched.herobraine.hero.handler import Handler
+from minerl_patched.env._singleagent import _SingleAgentEnv
 
 from .handlers import AgentPosObservation, FakeResetAction, \
                       HotBarObservation, \

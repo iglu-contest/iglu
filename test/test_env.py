@@ -1,4 +1,4 @@
-import minerl
+import minerl_patched
 import pickle
 import gym
 # import cv2

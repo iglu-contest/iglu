@@ -14,7 +14,7 @@ setup(
     packages=find_packages(exclude=['test', 'test.*']),
     long_description='',
     install_requires=[
-        'minerl',
+        'minerl_patched',
         'pandas'
     ],
     dependency_links=[

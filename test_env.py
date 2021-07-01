@@ -1,5 +1,5 @@
 import iglu
-import minerl
+import minerl_patched
 import pickle
 import json
 import gym

@@ -1,7 +1,7 @@
 import logging
 import gym
 import cv2
-from minerl.herobraine.hero.handlers.agent.actions import camera
+from minerl_patched.herobraine.hero.handlers.agent.actions import camera
 import numpy as np
 import wandb
 from copy import deepcopy

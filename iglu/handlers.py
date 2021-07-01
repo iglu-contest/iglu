@@ -3,10 +3,10 @@ import logging
 import numpy as np
 from typing import Union
 
-from minerl.herobraine.hero.handlers.agent.action import Action
-from minerl.herobraine.hero import spaces
-import minerl.herobraine.hero.handlers as handlers
-import minerl.herobraine.hero.handlers.agent.observations.location_stats as loc_obs
+from minerl_patched.herobraine.hero.handlers.agent.action import Action
+from minerl_patched.herobraine.hero import spaces
+import minerl_patched.herobraine.hero.handlers as handlers
+import minerl_patched.herobraine.hero.handlers.agent.observations.location_stats as loc_obs
 
 from .const import BUILD_ZONE_SIZE, \
                    GROUND_LEVEL, \
