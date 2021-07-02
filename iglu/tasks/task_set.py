@@ -8,6 +8,7 @@ import uuid
 from zipfile import ZipFile
 import pandas as pd
 from collections import defaultdict
+from typing import Tuple, List
 
 import numpy as np
 
@@ -141,6 +142,23 @@ class TaskSet:
         return {k: v for k, v in TaskSet.ALL.items() if k in task_set}
 
 
+class CustomTasks(TaskSet):
+    """ TaskSet that consists of user-defined goal structures
+
+    Args:
+        goals (List[Tuple[str, np.ndarray]]): list of tasks. 
+            Each task is represented by a pair 
+            (string conversation, 3d numpy grid)
+    """
+    def __init__(self, goals: List[Tuple[str, np.ndarray]]):
+        super().__init__()
+        self.preset = {
+            str(uuid.uuid4().hex): Task(conversation, grid) 
+            for conversation, grid in goals
+        }
+        self.task_ids = list(self.preset.keys())
+
+
 class RandomTasks(TaskSet):
     """ 
     TaskSet that consists of number of randomly generated tasks
@@ -168,7 +186,7 @@ class RandomTasks(TaskSet):
         self.preset = {}
         self.current = None
         for _ in range(self.max_cache):
-            uid = str(uuid.uuid1())[:8]
+            uid = str(uuid.uuid4().hex)
             self.preset[uid] = self.sample_task()
         self.sample()
 
@@ -231,5 +249,8 @@ class RandomTasks(TaskSet):
 
         return Task(chat, target_grid)
 
+# to initialize task descriptions
+_ = TaskSet(preset=[f'C{j}' for j in range(1, 158)], update_task_dict=True) 
 
+ALL_TASKS = TaskSet.subset([f'C{k}' for k in range(1, 158)])
 SIMPLEST_TASKS = TaskSet.subset(['C3', 'C8', 'C12', 'C14', 'C32', 'C17'])

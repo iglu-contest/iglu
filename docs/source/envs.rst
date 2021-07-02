@@ -5,17 +5,20 @@ IGLU Environments
 .. _MineRL: http://minerl.io
 
 
+All environments provided here are created to be used for the Silent builder task 
+of IGLU competition. In the Silent builder task, the goal is to create an agent that
+has access to the past conversation that led to some structure built by human builder.   
+
 IGLUSilentBuilder-v0
 --------------------
 
-This environment is part of Silent Builder task of IGLU competition. 
 The agent spawns at the center of building zone which is a `11x9x11`
-cuboid above blocks which are marked white. Each step the agent gets a pov image,
+cuboid above the blocks which are marked white. Each step the agent gets a pov image,
 an inventory state, a position, and the goal information which is described
 below. The agent can navigate inside the building zone, select block stack
 from the inventory and place/break blocks. The goal of the agent is to build 
-the target structure using only the text of the conversation betwen human 
-architect and builder taken from the dataset.
+the target structure using only the text of the conversation of human 
+architect with human builder taken from the dataset.
 
 Observation space
 *****************
@@ -55,7 +58,7 @@ for ``"grid"`` observation component.
 .. warning::
 
     This observation space will not be used for evaluation in the Silent Builder task
-    of the IGLU competition. For evaluation environment see ``IGLUSilentBuilderVisual-v0``
+    of the IGLU competition. For the evaluation environment, see ``IGLUSilentBuilderVisual-v0``.
 
 Action space
 ************
@@ -79,7 +82,8 @@ Human-level actions:
    })
 
 This action space is the same as that in MineRL_ competition environments except there 
-are ``"hotbar"`` selection commands added.
+are ``"hotbar"`` selection commands added. ``"hotbar"`` commands correspond to the selection
+of 6 block stacks of different colours + one action that does nothing with the selected stack.
 
 Discrete coordinate actions:
 
@@ -120,8 +124,8 @@ Continuous movement actions:
    })
 
 This action space allows agent to fly freely inside the building zone without 
-collisions (except with the ground and invisible walls surrounding the building zone). The rest components of the action space 
-are the same as in the previous two spaces.
+collisions (except with the ground and invisible walls surrounding the building zone). 
+The rest components of the action space are the same as in the previous two spaces.
 
 Note that due to how Minecraft processes that kind of events, states are changed with the delay of 2-4 actions. 
 
@@ -140,6 +144,16 @@ to the environment constructor:
 The default value is ``'human-level'``.
 
 
+.. warning::
+
+    To speed up the environment, iglu doesn't reload the whole Minecraft mission 
+    at each ``env.reset()`` (as it takes 3-5 seconds). Instead, it cleans up the building 
+    zone, teleports the agent into the initial position refilling its inventory. Such 
+    "fake reset" operation costs just one environment step. But this is an experimental feature
+    that may work unstable, leading to unwanted bugs with minerl socket interaction. 
+    If you experience such kind of problems, you can disable fake reset using 
+    ``export IGLU_DISABLE_FAKE_RESET=1`` before running script.
+ 
 IGLUSilentBuilderVisual-v0
 --------------------------
 
@@ -183,5 +197,23 @@ The default value is ``'human-level'``.
 Reward calculation
 ------------------
 
+Each step, the agent receives a reward. Its value is determined by the current 
+goal structure and the one built so far. The reward is determined regardless of 
+global spatial position of currently placed blocks, it only takes into account 
+how much the built blocks are similar to the target structure. To make it possible,
+at each step we calculate the intersection between the built and the target structures for each
+spatial translation within the horizontal plane and rotation around the vertical axis.
+Then we take the maximal intersection value among all translation and rotations.
+To calculate the reward, we compare the maximal intersection size from the current step
+with the one from the previous step. We reward the agent with ``2`` for the increase of the
+maximal intersection size, with ``-2`` for the decrease of the maximal intersection size, and 
+with ``1``/``-1`` for removing/placing a block without a change of the maximal intersection size.
 
-TODO
+In the image below, there is an example of L-shaped target and two blocks placed
+diagonally. Despite the target is somewhere at the center of the zone, it fully 
+covers two diagonal blocks (for some spatial alignment) forcing the agent to complete the structure where they
+started placing blocks.
+
+.. image:: assets/intersections.png
+  :scale: 30 %
+  :alt:

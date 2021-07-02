@@ -13,7 +13,7 @@ class Task:
         self.target_size = (target_grid != 0).sum().item()
         self.target_grid = target_grid
         self.target_grids = [target_grid]
-        # fill self.target_grids with four rotations of the original grid around vertical axis
+        # fill self.target_grids with four rotations of the original grid around the vertical axis
         for _ in range(3):
             self.target_grids.append(np.zeros(target_grid.shape, dtype=np.int32))
             for x in range(BUILD_ZONE_SIZE_X):

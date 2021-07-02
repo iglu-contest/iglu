@@ -27,6 +27,10 @@ block_short2id = {
     ])
 }
 
+id2color = dict(enumerate(['air'] + [
+    v[len('malmomod:iglu_minecraft_'):-len('_rn')] for v in block_map.values()
+]))
+
 id2block = {
     i: b for i, b in enumerate(['air'] + list(block_map.values()))
 }
