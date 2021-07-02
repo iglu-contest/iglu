@@ -178,3 +178,10 @@ In this environment there is again a freedom to select any action space you want
    env = gym.make('IGLUSilentBuilderVisual-v0', action_space='continuous')
 
 The default value is ``'human-level'``.
+
+
+Reward calculation
+------------------
+
+
+TODO

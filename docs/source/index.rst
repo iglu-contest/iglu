@@ -26,14 +26,14 @@ by natural language in the game's chat.
 
 
 .. image:: assets/dialog_example.png
-  :scale: 60 %
+  :scale: 50 %
   :alt:
 
 We thank creators of MineRL_, as our codebase depends heavily on their project.
 
 .. toctree::
    :caption: Getting started
-   :maxdepth: 1
+   :maxdepth: 2
 
    installation
    envs

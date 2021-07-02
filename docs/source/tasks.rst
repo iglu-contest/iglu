@@ -33,6 +33,15 @@ Here is the full list of available goals:
    ts = TaskSet(preset=[f'C{j}' for j in range(1, 158)], update_task_dict=True)
    print('\n'.join(f'{k}: {v}' for k, v in TaskSet.ALL.items()))
 
+Minecraft dialogue
+------------------
+
+RandomTasks
+-----------
+
+CustomTasks
+-----------
+
 References
 ==========
 
