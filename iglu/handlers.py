@@ -1,6 +1,7 @@
 from collections import Counter
 import logging
 import numpy as np
+import gym
 from typing import Union
 
 from minerl_patched.herobraine.hero.handlers.agent.action import Action
@@ -59,7 +60,7 @@ class FakeResetAction(Action):
         super().__init__('fake_reset', spaces.Discrete(2))
 
 
-class AbsoluteNavigationActions(Action):
+class ContinuousNavigationActions(Action):
     def xml_template(self) -> str:
         return str("""<AbsoluteMovementCommands>
             <ModifierList type="allow-list">
@@ -71,53 +72,29 @@ class AbsoluteNavigationActions(Action):
             """
         )
 
-    def __init__(self, position, pitch, yaw, ground_level, build_zone):
+    def __init__(self, position, ground_level, build_zone):
         self.commands = [
             'tp', #'setPitch', 'setYaw'
         ]
         self.ground_level = ground_level
         self.pos = np.array(list(position))
-        self.pitch = pitch
-        self.yaw = yaw
         self.bz1, self.bz2 = build_zone
         self.bz1 = np.array(self.bz1)
         self.bz2 = np.array(self.bz2)
-        self.navigation_commands = {
-            'noop': np.array([0, 0, 0]),
-            'movenorth': np.array([0, 0, -1]),
-            'movesouth': np.array([0, 0, -1]),
-            'moveeast': np.array([1, 0, 0]),
-            'movewest': np.array([-1, 0, 0]),
-            'up': np.array([0, 1, 0]),
-            'down': np.array([0, -1, 0]),
-        }
-        self.action_map = list(self.navigation_commands.keys())
-        self.inverse_map = {
-            v: i for i, v in enumerate(self.action_map)
-        }
-        super().__init__('abs_navigation', spaces.Discrete(
-            len(self.action_map)))
+        super().__init__('navigation', spaces.Dict({
+            'move_x': spaces.Box(low=-1., high=1., shape=()),
+            'move_y': spaces.Box(low=-1., high=1., shape=()),
+            'move_z': spaces.Box(low=-1., high=1., shape=()),
+        }))
 
-    def to_hero(self, x: Union[int, np.int]):
-        """
-        Returns a command string for the multi command action.
-        :param x:
-        :return:
-        """
-        if not isinstance(x, int):
-            x = x.item()
-        x_id = x
-        x = self.action_map[x]
-        if x == 'noop':
-            return ''
-        if x_id < len(self.navigation_commands):
-            cmd = self.navigation_commands[x]
-            self.pos += cmd
-            self.pos = np.maximum(self.pos, self.bz1)
-            self.pos = np.minimum(self.pos, self.bz2)
-            self.pos[1] = max(self.pos[1], self.ground_level)
-            coord = ' '.join(map(str, self.pos.tolist()))
-            cmd = f'tp {coord}'
+    def to_hero(self, x):
+        cmd = np.array([x[f'move_{k}'] for k in ['x', 'y', 'z']])
+        self.pos += cmd
+        self.pos = np.maximum(self.pos, self.bz1)
+        self.pos = np.minimum(self.pos, self.bz2)
+        self.pos[1] = max(self.pos[1], self.ground_level)
+        coord = ' '.join(map(str, self.pos.round(4).tolist()))
+        cmd = f'tp {coord}'
         return cmd
 
 class DiscreteNavigationActions(Action):
@@ -132,7 +109,7 @@ class DiscreteNavigationActions(Action):
             """
         )
 
-    def __init__(self, movement=True, camera=True, placement=True):
+    def __init__(self, movement=True, camera=True, placement=True, custom_name=None):
         self.commands = []
         if movement:
             self.commands += ['move', 'jumpmove', 'strafe', 'jumpstrafe']
@@ -141,39 +118,29 @@ class DiscreteNavigationActions(Action):
         if placement:
             self.commands += ['attack', 'use']
         self.angle = 0
-        self.action_map = [
-            '', # no-op
-        ]
+        space = {}
         if movement:
-            self.action_map += [
-                'move 1',
-                'move -1',
-                'jumpmove 1',
-                'jumpmove -1',
-                'strafe 1',
-                'strafe -1',
-                'jumpstrafe 1',
-                'jumpstrafe -1',
-            ]
+            space.update({
+                'move': spaces.Discrete(3),
+                'strafe': spaces.Discrete(3),
+                'jump': spaces.Discrete(2),
+            })
         if camera:
-            self.action_map += [
-                'turn 1',
-                'turn -1',
-                'look 1',
-                'look -1',    
-            ]
+            space.update({
+                "turn": spaces.Discrete(3),
+                "look": spaces.Discrete(3),
+            })
         if placement:
-            self.action_map += [
-                'attack 1',
-                'use 1'
-            ]
-        self.inverse_map = {
-            v: i for i, v in enumerate(self.action_map)
-        }
-        super().__init__('navigation', spaces.Discrete(len(self.action_map)))
+            space.update({
+                "attack": spaces.Discrete(2),
+                "use": spaces.Discrete(2)
+            })
+        space = spaces.Dict(space)
+        name = 'navigation' if custom_name is None else custom_name
+        super().__init__(name, space)
 
-    def _is_look_command(self, action_id):
-        return 'look' in self.action_map[action_id] 
+    def _is_look_command(self, action):
+        return 'look' in action and action['look'] != 0
     
     def to_hero(self, x: Union[int, np.int]):
         """
@@ -181,11 +148,23 @@ class DiscreteNavigationActions(Action):
         :param x:
         :return:
         """
-        if not isinstance(x, int):
-            x = x.item()
-        cmd = self.action_map[x]
+        action_list = []
+        for movement in ['move', 'strafe', 'turn', 'look']:
+            if movement in x and x[movement] != 0:
+                way = 1 if x[movement] == 2 else -1
+                jmp = ''
+                if x['jump'] == 1 and movement in ['move', 'strafe']:
+                    jmp = 'jump'
+                action_list.append(f'{jmp}{movement} {way}')
+        if 'move' in x and x['move'] == 0 and 'strafe' in x and x['strafe'] == 0:
+            if 'jump' in x and x['jump'] == 1:
+                action_list.append('jump 1')
+        for act in ['attack', 'use']:
+            if act in x and x[act] != 0:
+                action_list.append(f'{act} 1')
+        cmd = '\n'.join(action_list)
         if self._is_look_command(x):
-            delta = int(cmd[len('look '):])
+            delta = 1 if x[movement] == 2 else -1
             if (self.angle ==  2 and delta ==  1
              or self.angle == -2 and delta == -1):
                 # each look 1/-1 action turns agent's camera upwards or downwards
@@ -244,6 +223,35 @@ class AgentPosObservation(handlers.TranslationHandlerGroup):
         obs = super().from_hero(x)
         return np.array([obs['xpos'], obs['ypos'] - GROUND_LEVEL - 1, obs['zpos'],
                          obs['pitch'], obs['yaw']])
+
+
+class String(gym.spaces.Space):
+    def noop(self, batch_shape=()):
+        return ''
+    
+    def sample(self, bdim=None):
+        return ''
+    
+    def contains(self, x):
+        return x == ''
+
+
+class ChatObservation(handlers.TranslationHandler):
+    def to_string(self) -> str:
+        return "chat"
+
+    def xml_template(self) -> str:
+        return ""
+
+    def __init__(self, monitor):
+        self.monitor = monitor
+        super().__init__(space=String())
+
+    def __repr__(self):
+        return "String()"
+    
+    def from_hero(self, x): 
+        return self.monitor.current_task.chat
 
 
 class GridObservation(handlers.TranslationHandler):

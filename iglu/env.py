@@ -25,8 +25,9 @@ from .handlers import AgentPosObservation, FakeResetAction, \
                       CameraAction, \
                       GridIntersectionMonitor, \
                       DiscreteNavigationActions, \
-                      AbsoluteNavigationActions, \
-                      FakeResetAction
+                      ContinuousNavigationActions, \
+                      FakeResetAction, \
+                      ChatObservation
 
 from .const import GROUND_LEVEL, block_map, id2block
 from .tasks import TaskSet, RandomTasks
@@ -53,6 +54,12 @@ class IGLUEnv(_SingleAgentEnv):
                 k: v for k, v in action_space.spaces.items()
                 if k != 'fake_reset'
             })
+            # flatten space
+            if self.action_space_type == 'continuous':
+                flatten_func = self.task.flatten_continuous_actions
+            elif self.action_space_type == 'discrete':
+                flatten_func = self.task.flatten_discrete_actions
+            self.action_space_, self.unflatten_action = flatten_func(self.action_space_)
         return self.action_space_
 
     @action_space.setter
@@ -63,7 +70,6 @@ class IGLUEnv(_SingleAgentEnv):
                 k: v for k, v in self.action_space_.spaces.items()
                 if k != 'fake_reset'
             })
-
     def _init_tasks(self):
         self.spec._kwargs['env_spec'].task_monitor.tasks = self._tasks
 
@@ -122,6 +128,7 @@ class IGLUEnv(_SingleAgentEnv):
     def step(self, action):
         action['fake_reset'] = 0
         self.counter += 1
+        action = self.unflatten_action(action)
         obs, reward, done, info = super().step(action)
         if 'task' not in info: # connection timed out
             reward = 0
@@ -211,7 +218,9 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
             return [
                 handlers.POVObservation(self.resolution),
                 AgentPosObservation(),
+                handlers.CompassObservation(),
                 HotBarObservation(6),
+                ChatObservation(self.task_monitor),
                 GridObservation(
                     grid_name='build_zone',
                     min_x=-5, min_y=GROUND_LEVEL + 1, min_z=-5,
@@ -222,6 +231,8 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
             return [
                 handlers.POVObservation(self.resolution),
                 HotBarObservation(6),
+                handlers.CompassObservation(),
+                ChatObservation(self.task_monitor),
                 GridObservation(
                     grid_name='build_zone',
                     min_x=-5, min_y=GROUND_LEVEL + 1, min_z=-5,
@@ -241,10 +252,10 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     def create_actionables(self):
         if self.action_space_type == 'discrete':
             return self.discrete_actions()
-        elif self.action_space_type == 'absolute':
-            return self.absolute_actions()
+        elif self.action_space_type == 'continuous':
+            return self.continuous_actions()
         elif self.action_space_type == 'human-level':
-            return self.humal_level_actions()
+            return self.human_level_actions()
 
     def discrete_actions(self):
         discrete = DiscreteNavigationActions(movement=True, camera=False, placement=True)
@@ -256,22 +267,73 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
             HotBarChoiceAction(6),
             FakeResetAction(),
         ]
+    
+    def flatten_discrete_actions(self, action_space):
+        sps = action_space.spaces
+        new_space = Dict({
+            'move': sps['navigation']['move'],
+            'strafe': sps['navigation']['strafe'],
+            'jump': sps['navigation']['jump'],
+            'attack': sps['navigation']['attack'],
+            'use': sps['navigation']['use'],
+            'camera': sps['camera'],
+            'hotbar': sps['hotbar']
+        })
+        def unflatten(action_sample):
+            updated = {
+                'navigation': {
+                    k: action_sample[k] for k in ['move', 'strafe', 'jump', 'attack', 'use']
+                },
+                'camera': action_sample['camera'],
+                'hotbar': action_sample['hotbar']
+            }
+            # need to preserve the rest of keys
+            for k in ['move', 'strafe', 'jump', 'attack', 'use', 'camera', 'hotbar']:
+                del action_sample[k]
+            action_sample.update(updated)
+            return action_sample
+        return new_space, unflatten
 
-    def absolute_actions(self):
+
+    def continuous_actions(self):
         return [
-            AbsoluteNavigationActions(
-                (0.5, GROUND_LEVEL + 1, 0.5), pitch=0,
-                yaw=-90, ground_level=GROUND_LEVEL + 1,
+            ContinuousNavigationActions(
+                (0.5, GROUND_LEVEL + 1, 0.5), ground_level=GROUND_LEVEL + 1,
                 build_zone=[(-5, GROUND_LEVEL + 1, -5),
                             (5, GROUND_LEVEL + 9, 5)]
             ),
             CameraAction(),
             HotBarChoiceAction(6),
-            DiscreteNavigationActions(movement=False, camera=False, placement=True),
+            DiscreteNavigationActions(movement=False, camera=False, placement=True, custom_name='placing'),
             FakeResetAction(),
         ]
 
-    def humal_level_actions(self):
+    def flatten_continuous_actions(self, action_space):
+        sps = action_space.spaces
+        new_space = Dict({
+            'move_x': sps['navigation']['move_x'],
+            'move_y': sps['navigation']['move_y'],
+            'move_z': sps['navigation']['move_z'],
+            'camera': sps['camera'],
+            'attack': sps['placing']['attack'],
+            'use':    sps['placing']['use'],
+            'hotbar': sps['hotbar']
+        })
+        def unflatten(action_sample):
+            updated = {
+                'navigation': {f'move_{k}': action_sample[f'move_{k}'] for k in ['x', 'y', 'z']},
+                'camera': action_sample['camera'],
+                'placing': {'attack': action_sample['attack'], 'use': action_sample['use']},
+                'hotbar': action_sample['hotbar'],
+            }
+            # need to preserve the rest of keys
+            for k in ['move_x', 'move_y', 'move_z', 'attack', 'use', 'camera', 'hotbar']:
+                del action_sample[k]
+            action_sample.update(updated)
+            return action_sample
+        return new_space, unflatten
+
+    def human_level_actions(self):
         SIMPLE_KEYBOARD_ACTION = [
             "forward",
             "back",
