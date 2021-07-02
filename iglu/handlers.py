@@ -49,7 +49,7 @@ class CameraAction(Action):
 
     def __init__(self):
         self._command = 'camera'
-        super().__init__(self.command, spaces.Box(low=-5, high=5, shape=[2], dtype=np.float32))
+        super().__init__(self.command, spaces.Box(low=-180., high=180, shape=[2], dtype=np.float32))
 
 
 class FakeResetAction(Action):

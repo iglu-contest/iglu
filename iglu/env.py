@@ -59,7 +59,10 @@ class IGLUEnv(_SingleAgentEnv):
                 flatten_func = self.task.flatten_continuous_actions
             elif self.action_space_type == 'discrete':
                 flatten_func = self.task.flatten_discrete_actions
+            elif self.action_space_type == 'human-level':
+                flatten_func = lambda a: (a, (lambda x: x))
             self.action_space_, self.unflatten_action = flatten_func(self.action_space_)
+            
         return self.action_space_
 
     @action_space.setter
@@ -165,7 +168,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         return False
 
     def create_agent_mode(self):
-        return "Survival"
+        return "Creative" if self.action_space_type == 'continuous' else "Survival"
 
     def create_agent_start(self):
         # TODO: randomize agent initial position here
