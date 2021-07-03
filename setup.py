@@ -8,7 +8,7 @@ with open("requirements.txt", "r") as fh:
 
 setup(
     name='iglu',
-    version='0.1',
+    version='0.2.0',
     include_package_data=True,
     packages=find_packages(exclude=['test', 'test.*']),
     long_description='',
