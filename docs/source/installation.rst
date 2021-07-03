@@ -52,7 +52,7 @@ install IGLU environment
    conda create -n iglu_env python=3.7
    conda activate iglu_env
 
-You can install using pip: `TODO`
+You can install using pip: ``pip install iglu``
 
 To install the package manually, do the following:
 

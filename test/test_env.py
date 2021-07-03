@@ -1,15 +1,10 @@
+
 import minerl_patched
-import pickle
-import gym
-# import cv2
-import numpy as np
-from time import time
-from collections import defaultdict
 import iglu
-from iglu.tasks import RandomTasks, TaskSet
-import sys
+import gym
+
 from tqdm import tqdm
-import logging
+from time import time
 
 if __name__ == '__main__':
     env = gym.make('IGLUSilentBuilder-v0', max_steps=1000)

@@ -18,12 +18,6 @@ docker build -t iglu_base -f docker/base.Dockerfile .
 docker build --build-arg BASE=iglu_base --network host -t iglu_env -f docker/iglu.Dockerfile .
 ```
 
-If you plan to use reinforcement learning stack to provide a solution, build the image with stable versions of rl requirements:
-
-```bash
-docker build --build-arg BASE=iglu_env -f docker/ml.Dockerfile -t iglu .
-```
-
 ## Testing installation
 
 To test `iglu` in the container, run the following command from the root of cloned repo:

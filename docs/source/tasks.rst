@@ -46,8 +46,6 @@ To use random tasks with the environment, you should call ``.update_taskset`` me
 Custom tasks
 ------------
 
-TODO check that code!!!
-
 :py:class:`~iglu.tasks.task_set.CustomTasks` class provides an ability to load
 and use an arbitrary set of tasks. Each task should contain a conversation 
 betwen the architect and the builder; 3d numpy array with target coordinates.

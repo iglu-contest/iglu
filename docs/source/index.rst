@@ -51,28 +51,6 @@ We thank creators of MineRL_, as our codebase depends heavily on their project.
    tasks
 
 
-Your first agent
-================
-
-TODO
-
-.. code-block:: python
-
-   import gym
-   import iglu
-
-   env = gym.make('IGLUSilentBuilder-v0', max_steps=1000)
-   obs = env.reset()
-   done = False
-
-   while not done:
-       action = env.action_space.sample()
-       obs, reward, done, info = env.step(action)
-       
-
-
-
-
 Package reference
 =================
 
