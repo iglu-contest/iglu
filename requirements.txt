@@ -21,3 +21,4 @@ jinja2>=2.11.2
 simple-term-menu
 bullet
 minerl-patched==0.1.0
+pandas==1.1.3

@@ -8,7 +8,7 @@ with open("requirements.txt", "r") as fh:
 
 setup(
     name='iglu',
-    version='0.2.1',
+    version='0.2.2',
     description='IGLU: Interactive Grounded Language Understanding in Minecraft',
     long_description=markdown,
     long_description_content_type="text/markdown",
@@ -18,6 +18,7 @@ setup(
     include_package_data=True,
     packages=find_packages(exclude=['test', 'test.*']),
     install_requires=requirements,
+    python_requires='>=3.7',
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
