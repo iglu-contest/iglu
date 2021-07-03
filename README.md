@@ -1,5 +1,7 @@
 # Iglu Environment
 
+The main documentation is available [here](https://iglu-contest.github.io/).
+
 ## Installation
 
 ### 1. JDK 1.8 installation 

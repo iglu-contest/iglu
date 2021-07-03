@@ -1,21 +1,25 @@
-from operator import methodcaller
+
 from setuptools import setup, find_packages
-from os.path import join, dirname
 
-
+with open("README.md", "r") as fh:
+    markdown = fh.read()
 with open("requirements.txt", "r") as fh:
     requirements = fh.read()
 
 setup(
     name='iglu',
-    version='0.1',
+    version='0.2.1',
+    description='IGLU: Interactive Grounded Language Understanding in Minecraft',
+    long_description=markdown,
+    long_description_content_type="text/markdown",
+    url='https://github.com/iglu-contest/iglu',
+    author='IGLU team',
+    author_email='info@iglu-contest.net',
     include_package_data=True,
     packages=find_packages(exclude=['test', 'test.*']),
-    long_description='',
-    install_requires='\n'.join([
-        'minerl_patched', requirements
-    ]),
-    dependency_links=[
-        'https://github.com/iglu-contest/minerl/releases/download/v0.3.7-patched/minerl_patched-0.4.0.zip',
-    ]
+    install_requires=requirements,
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "Operating System :: OS Independent",
+    ],
 )
