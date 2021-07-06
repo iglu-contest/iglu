@@ -18,7 +18,7 @@ sudo apt-get install openjdk-8-jdk
 
 ```bash
 brew tap AdoptOpenJDK/openjdk
-brew cask install adoptopenjdk8
+brew install --cask adoptopenjdk8 #or `brew cask install adoptopenjdk8` for brew version < 3.
 ```
 
 #### On Windows:
