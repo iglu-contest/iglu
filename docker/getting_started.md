@@ -23,7 +23,7 @@ docker build --build-arg BASE=iglu_base --network host -t iglu_env -f docker/igl
 To test `iglu` in the container, run the following command from the root of cloned repo:
 
 ```bash
-docker run --network host --rm -it -v $(pwd):/root/iglu_dev iglu python iglu_dev/test_env.py
+docker run --network host --rm -it -v $(pwd):/root/iglu_dev iglucontest/env python iglu_dev/test/test_env.py
 ```
 
 You should see step counter followed by total reward of random agent.
