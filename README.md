@@ -65,3 +65,9 @@ conda env update --file conda_env.yml
 ### Docker installation 
 
 To use `iglu` environment inside the docker container proceed to [Docker installation](docker/getting_started.md) section.
+
+## Known Issues
+
+### Java versions
+
+You might have another java version installed (e.g. `openjdk-11`), rather than `openjdk-8-jdk`. Check the version by running `java --version` or `java -version`.
