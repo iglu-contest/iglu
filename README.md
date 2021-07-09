@@ -56,6 +56,9 @@ python setup.py install
 ```
 cd test && python test_env.py
 ```
+You can change the download directory for the The Minecraft Dialogue Corpus by setting the `IGLU_DATA_PATH` environment variable to the directory of your liking.
+
+
 ### Suggested requirements for RL solution
 
 ```bash
