@@ -70,4 +70,6 @@ To use `iglu` environment inside the docker container proceed to [Docker install
 
 ### Java versions
 
-You might have another java version installed (e.g. `openjdk-11`), rather than `openjdk-8-jdk`. Check the version by running `java --version` or `java -version`.
+You might have another java version installed (e.g. `openjdk-11`), rather than `openjdk-8-jdk`. Check the version by running `java --version` or `java -version`. 
+
+To update default java runtime it's either `update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java` or `update-alternatives --config java`. The second one is preferable since it isn't conditioned on a particular path.
