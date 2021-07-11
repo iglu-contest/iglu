@@ -20,8 +20,10 @@ from ..const import block2id, id2block, block_map, \
                 BUILD_ZONE_SIZE_X, \
                 BUILD_ZONE_SIZE_Z
 
-DATA_PREFIX = os.path.join(os.environ['HOME'], '.iglu', 'data')
-
+if 'IGLU_DATA_PATH' in os.environ:
+    DATA_PREFIX = os.path.join(os.environ['IGLU_DATA_PATH'], 'data')
+else:
+    DATA_PREFIX = os.path.join(os.environ['HOME'], '.iglu', 'data')
 
 class TaskSet:
     ALL = {}
