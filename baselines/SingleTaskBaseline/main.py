@@ -35,9 +35,9 @@ def main(num_proc=1):
     task = 'C17'
     wb = wandb.init(project='IGLU-SingleTaskBaseline', config={'task': task})
     if num_proc > 1:
-        env = SubprocVecEnv([make_pov_iglu() for _ in range(num_proc)])
+        env = SubprocVecEnv([make_pov_iglu(task) for _ in range(num_proc)])
     else:
-        env = make_pov_iglu()()
+        env = make_pov_iglu(task)()
     agent = PPO('CnnPolicy', env, verbose=True)
     
     agent.set_logger(WbLogger(wb))
