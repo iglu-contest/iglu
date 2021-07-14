@@ -1,10 +1,11 @@
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import SubprocVecEnv
+
 import wandb
 from gym import ObservationWrapper
 import gym
 import numpy as np
 from iglu.tasks import TaskSet
-from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import SubprocVecEnv
 
 from common import WbRewardCallback, WbLogger
 from wrappers import IgluActionWrapper
