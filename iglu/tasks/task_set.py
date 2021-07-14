@@ -48,7 +48,7 @@ class TaskSet:
             task_path = os.path.join(DATA_PREFIX, self.tasks[task_id][0][0], 'logs', self.tasks[task_id][0][1])
             task = Task(*self._parse_task(task_path, task_id, update_task_dict=update_task_dict))
             self.preset[task_id] = task
-        
+
     def sample(self):
         sample = np.random.choice(len(self.task_ids))
         self.current = self.preset[self.task_ids[sample]]
@@ -86,7 +86,7 @@ class TaskSet:
         dirs = [dir_ for dir_ in os.listdir(os.path.join(DATA_PREFIX, dir_name)) if dir_.startswith('data-')]
         for dir_ in dirs:
             shutil.move(
-                os.path.join(DATA_PREFIX, dir_name, dir_), 
+                os.path.join(DATA_PREFIX, dir_name, dir_),
                 os.path.join(DATA_PREFIX, dir_),
             )
         for entry in os.listdir(DATA_PREFIX):
@@ -96,7 +96,7 @@ class TaskSet:
                     os.remove(candidate)
                 else:
                     shutil.rmtree(candidate, ignore_errors=True)
-        
+
     def _parse_data(self):
         tasks = defaultdict(list)
         for folder in os.listdir(DATA_PREFIX):
@@ -120,15 +120,19 @@ class TaskSet:
         data = data['WorldStates'][-1]
         chat = '\n'.join(data['ChatHistory'])
         target_grid = np.zeros(BUILD_ZONE_SIZE, dtype=np.int32)
+        total_blocks = 0
         for block in data['BlocksInGrid']:
             coord = block['AbsoluteCoordinates']
+            x, y, z = coord['X'], coord['Y'], coord['Z']
+            if not (-5 <= x <= 5 and -5 <= z <= 5 and 0 <= y <= 8):
+                continue
             target_grid[
                 coord['Y'] - 1,
                 coord['X'] + 5,
                 coord['Z'] + 5
             ] = block2id[block_map[block['Type']]]
+            total_blocks += 1
         if update_task_dict:
-            total_blocks = len(data['BlocksInGrid'])
             colors = len(np.unique([b['Type'] for b in data['BlocksInGrid']]))
             TaskSet.ALL[task_id] = f'{TaskSet.ALL[task_id]} ({total_blocks} blocks, {colors} colors)'
         return chat, target_grid
@@ -136,7 +140,7 @@ class TaskSet:
     def __repr__(self):
         tasks = ", ".join(f'"{t}"' for t in self.task_ids)
         return f'TaskSet({tasks})'
-    
+
     @staticmethod
     def subset(task_set):
         return {k: v for k, v in TaskSet.ALL.items() if k in task_set}
@@ -146,21 +150,21 @@ class CustomTasks(TaskSet):
     """ TaskSet that consists of user-defined goal structures
 
     Args:
-        goals (List[Tuple[str, np.ndarray]]): list of tasks. 
-            Each task is represented by a pair 
+        goals (List[Tuple[str, np.ndarray]]): list of tasks.
+            Each task is represented by a pair
             (string conversation, 3d numpy grid)
     """
     def __init__(self, goals: List[Tuple[str, np.ndarray]]):
         super().__init__()
         self.preset = {
-            str(uuid.uuid4().hex): Task(conversation, grid) 
+            str(uuid.uuid4().hex): Task(conversation, grid)
             for conversation, grid in goals
         }
         self.task_ids = list(self.preset.keys())
 
 
 class RandomTasks(TaskSet):
-    """ 
+    """
     TaskSet that consists of number of randomly generated tasks
 
     Args:
@@ -174,9 +178,9 @@ class RandomTasks(TaskSet):
     """
     def __init__(
         self, max_blocks=4,
-        height_levels=1, allow_float=False, max_dist=2, 
-        num_colors=1, max_cache=0, 
-    ): 
+        height_levels=1, allow_float=False, max_dist=2,
+        num_colors=1, max_cache=0,
+    ):
         self.height_levels = height_levels
         self.max_blocks = max_blocks
         self.allow_float = allow_float
@@ -242,7 +246,7 @@ class RandomTasks(TaskSet):
                         or block_x + block_delta_x < 0 \
                         or block_z + block_delta_z < 0 \
                         or target_grid[height, block_x + block_delta_x, block_z + block_delta_z] != 0:
-                    block_delta_x = np.random.choice(2 * self.max_dist + 1) - self.max_dist 
+                    block_delta_x = np.random.choice(2 * self.max_dist + 1) - self.max_dist
                     block_delta_z = np.random.choice(2 * self.max_dist + 1) - self.max_dist
                     color = np.random.choice(self.num_colors) + 1
                 target_grid[height, block_x + block_delta_x, block_z + block_delta_z] = color
@@ -250,7 +254,7 @@ class RandomTasks(TaskSet):
         return Task(chat, target_grid)
 
 # to initialize task descriptions
-_ = TaskSet(preset=[f'C{j}' for j in range(1, 158)], update_task_dict=True) 
+_ = TaskSet(preset=[f'C{j}' for j in range(1, 158)], update_task_dict=True)
 
 ALL_TASKS = TaskSet.subset([f'C{k}' for k in range(1, 158)])
 SIMPLEST_TASKS = TaskSet.subset(['C3', 'C8', 'C12', 'C14', 'C32', 'C17'])
