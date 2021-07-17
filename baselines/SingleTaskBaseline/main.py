@@ -45,7 +45,7 @@ def main(num_proc=1):
     agent.learn(5000000, 
             callback=[WbRewardCallback(wb=wb)]
             )
-    agent.save
+    agent.save('weights')
 
 if __name__ == '__main__':
     main()
