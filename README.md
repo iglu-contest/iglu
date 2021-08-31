@@ -1,5 +1,9 @@
 # Iglu Environment
 
+
+[![Downloads](https://pepy.tech/badge/iglu)](https://pepy.tech/project/iglu)
+[![PyPI version](https://badge.fury.io/py/iglu.svg)](https://badge.fury.io/py/iglu)
+
 The main documentation is available [here](https://iglu-contest.github.io/).
 
 ## Installation
