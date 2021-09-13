@@ -34,14 +34,16 @@ from .tasks import TaskSet, RandomTasks
 
 
 class IGLUEnv(_SingleAgentEnv):
-    def __init__(self, *args, max_steps=500, action_space='human-level', **kwargs) -> None:
+    def __init__(self, *args, max_steps=500, resolution=(64, 64), action_space='human-level', **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.action_space_type = action_space
         self._tasks = TaskSet(preset='one_task', task_id='C8')
         self.max_steps = max_steps
+        self.resolution = resolution
         self._should_reset_val = True
         self.counter = 0
         kwargs['env_spec'].action_space_type = action_space
+        kwargs['env_spec'].resolution = resolution
         self.action_space_ = None
 
     @property
@@ -129,6 +131,7 @@ class IGLUEnv(_SingleAgentEnv):
         return obs
 
     def step(self, action):
+        # TODO: copy action
         action['fake_reset'] = 0
         self.counter += 1
         action = self.unflatten_action(action)
@@ -150,7 +153,7 @@ class IGLUEnv(_SingleAgentEnv):
 
 class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     ENTRYPOINT = 'iglu.env:IGLUEnv'
-    def __init__(self, *args, iglu_evaluation=False, ation_space='human-level', **kwargs):
+    def __init__(self, *args, iglu_evaluation=False, resolution=(64, 64), ation_space='human-level', **kwargs):
         self.iglu_evaluation = iglu_evaluation
         self.action_space_type = ation_space
         self.task_monitor = GridIntersectionMonitor(grid_name='build_zone')
@@ -159,7 +162,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         else:
             name = 'IGLUSilentBuilder-v0'
         super().__init__(name=name, *args, max_episode_steps=30000,
-                         resolution=(64, 64), **kwargs)
+                         resolution=resolution, **kwargs)
 
     def _entry_point(self, fake: bool) -> str:
         return IGLUEnvSpec.ENTRYPOINT
