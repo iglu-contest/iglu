@@ -9,6 +9,7 @@ if os.environ.get('MINERL_ENABLE_LOG', '') == '1':
 
 import gym
 from gym import spaces
+from copy import deepcopy as copy
 from typing import List
 from minerl_patched.herobraine.env_specs.simple_embodiment import SimpleEmbodimentEnvSpec
 from minerl_patched.herobraine.hero.mc import MS_PER_STEP, INVERSE_KEYMAP
@@ -36,12 +37,14 @@ from .tasks import TaskSet, RandomTasks
 class IGLUEnv(_SingleAgentEnv):
     def __init__(
             self, *args, max_steps=500, resolution=(64, 64), 
+            start_position=(0.5, GROUND_LEVEL + 1, 0.5, 0., -90),
             bound_agent=True, action_space='human-level', **kwargs
         ) -> None:
         super().__init__(*args, **kwargs)
         self.action_space_type = action_space
         self._tasks = TaskSet(preset='one_task', task_id='C8')
         self.max_steps = max_steps
+        self.start_position = start_position
         self.resolution = resolution
         self.bound_agent = bound_agent
         self._should_reset_val = True
@@ -49,6 +52,7 @@ class IGLUEnv(_SingleAgentEnv):
         kwargs['env_spec'].action_space_type = action_space
         kwargs['env_spec'].resolution = resolution
         kwargs['env_spec'].bound_agent = bound_agent
+        kwargs['env_spec'].start_position = start_position
         self.action_space_ = None
 
     @property
@@ -137,6 +141,7 @@ class IGLUEnv(_SingleAgentEnv):
 
     def step(self, action):
         # TODO: copy action
+        action = copy(action)
         action['fake_reset'] = 0
         self.counter += 1
         action = self.unflatten_action(action)
@@ -161,10 +166,12 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     def __init__(
             self, *args, 
             iglu_evaluation=False, resolution=(64, 64), 
+            start_position=(0.5, GROUND_LEVEL + 1, 0.5, 0, -90),
             bound_agent=True, ation_space='human-level', **kwargs
         ):
         self.iglu_evaluation = iglu_evaluation
         self.bound_agent = bound_agent
+        self.start_position = start_position
         self.action_space_type = ation_space
         self.task_monitor = GridIntersectionMonitor(grid_name='build_zone')
         if iglu_evaluation:
@@ -185,8 +192,9 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
 
     def create_agent_start(self):
         # TODO: randomize agent initial position here
+        x, y, z, pitch, yaw = self.start_position
         return [
-            handlers.AgentStartPlacement(x=0.5, y=GROUND_LEVEL + 1, z=0.5, pitch=0, yaw=-90),
+            handlers.AgentStartPlacement(x=x, y=y, z=z, pitch=pitch, yaw=yaw),
             handlers.InventoryAgentStart({
                 i: {'type': v, 'quantity': 20} for i, v in enumerate(block_map.values())
             })
@@ -317,9 +325,10 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
                           (5, GROUND_LEVEL + 9, 5)]
         else:
             build_zone = None
+        x, y, z, _, _ = self.start_position
         return [
             ContinuousNavigationActions(
-                (0.5, GROUND_LEVEL + 1, 0.5), ground_level=GROUND_LEVEL + 1,
+                (x, y, z), ground_level=GROUND_LEVEL + 1,
                 build_zone=build_zone
             ),
             CameraAction(),

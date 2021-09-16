@@ -77,7 +77,7 @@ class ContinuousNavigationActions(Action):
             'tp', #'setPitch', 'setYaw'
         ]
         self.ground_level = ground_level
-        self.pos = np.array(list(position))
+        self.pos = np.array(list(position)).astype(np.float32)
         if build_zone is not None:
             self.bz1, self.bz2 = build_zone
             self.bz1 = np.array(self.bz1)
