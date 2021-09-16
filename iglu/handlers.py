@@ -78,9 +78,12 @@ class ContinuousNavigationActions(Action):
         ]
         self.ground_level = ground_level
         self.pos = np.array(list(position))
-        self.bz1, self.bz2 = build_zone
-        self.bz1 = np.array(self.bz1)
-        self.bz2 = np.array(self.bz2)
+        if build_zone is not None:
+            self.bz1, self.bz2 = build_zone
+            self.bz1 = np.array(self.bz1)
+            self.bz2 = np.array(self.bz2)
+        else:
+            self.bz1, self.bz2 = None, None
         super().__init__('navigation', spaces.Dict({
             'move_x': spaces.Box(low=-1., high=1., shape=()),
             'move_y': spaces.Box(low=-1., high=1., shape=()),
@@ -90,8 +93,10 @@ class ContinuousNavigationActions(Action):
     def to_hero(self, x):
         cmd = np.array([x[f'move_{k}'] for k in ['x', 'y', 'z']])
         self.pos += cmd
-        self.pos = np.maximum(self.pos, self.bz1)
-        self.pos = np.minimum(self.pos, self.bz2)
+        if self.bz1 is not None:
+            self.pos = np.maximum(self.pos, self.bz1)
+        if self.bz2 is not None:
+            self.pos = np.minimum(self.pos, self.bz2)
         self.pos[1] = max(self.pos[1], self.ground_level)
         coord = ' '.join(map(str, self.pos.round(4).tolist()))
         cmd = f'tp {coord}'

@@ -34,16 +34,21 @@ from .tasks import TaskSet, RandomTasks
 
 
 class IGLUEnv(_SingleAgentEnv):
-    def __init__(self, *args, max_steps=500, resolution=(64, 64), action_space='human-level', **kwargs) -> None:
+    def __init__(
+            self, *args, max_steps=500, resolution=(64, 64), 
+            bound_agent=True, action_space='human-level', **kwargs
+        ) -> None:
         super().__init__(*args, **kwargs)
         self.action_space_type = action_space
         self._tasks = TaskSet(preset='one_task', task_id='C8')
         self.max_steps = max_steps
         self.resolution = resolution
+        self.bound_agent = bound_agent
         self._should_reset_val = True
         self.counter = 0
         kwargs['env_spec'].action_space_type = action_space
         kwargs['env_spec'].resolution = resolution
+        kwargs['env_spec'].bound_agent = bound_agent
         self.action_space_ = None
 
     @property
@@ -153,8 +158,13 @@ class IGLUEnv(_SingleAgentEnv):
 
 class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     ENTRYPOINT = 'iglu.env:IGLUEnv'
-    def __init__(self, *args, iglu_evaluation=False, resolution=(64, 64), ation_space='human-level', **kwargs):
+    def __init__(
+            self, *args, 
+            iglu_evaluation=False, resolution=(64, 64), 
+            bound_agent=True, ation_space='human-level', **kwargs
+        ):
         self.iglu_evaluation = iglu_evaluation
+        self.bound_agent = bound_agent
         self.action_space_type = ation_space
         self.task_monitor = GridIntersectionMonitor(grid_name='build_zone')
         if iglu_evaluation:
@@ -302,11 +312,15 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
 
 
     def continuous_actions(self):
+        if self.bound_agent:
+            build_zone = [(-5, GROUND_LEVEL + 1, -5),
+                          (5, GROUND_LEVEL + 9, 5)]
+        else:
+            build_zone = None
         return [
             ContinuousNavigationActions(
                 (0.5, GROUND_LEVEL + 1, 0.5), ground_level=GROUND_LEVEL + 1,
-                build_zone=[(-5, GROUND_LEVEL + 1, -5),
-                            (5, GROUND_LEVEL + 9, 5)]
+                build_zone=build_zone
             ),
             CameraAction(),
             HotBarChoiceAction(6),
