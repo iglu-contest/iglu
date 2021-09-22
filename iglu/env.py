@@ -38,6 +38,7 @@ class IGLUEnv(_SingleAgentEnv):
     def __init__(
             self, *args, max_steps=500, resolution=(64, 64), 
             start_position=(0.5, GROUND_LEVEL + 1, 0.5, 0., -90),
+            initial_blocks=None,
             bound_agent=True, action_space='human-level', **kwargs
         ) -> None:
         super().__init__(*args, **kwargs)
@@ -45,15 +46,49 @@ class IGLUEnv(_SingleAgentEnv):
         self._tasks = TaskSet(preset='one_task', task_id='C8')
         self.max_steps = max_steps
         self.start_position = start_position
+        self.initial_blocks = initial_blocks
         self.resolution = resolution
         self.bound_agent = bound_agent
         self._should_reset_val = True
         self.counter = 0
         kwargs['env_spec'].action_space_type = action_space
-        kwargs['env_spec'].resolution = resolution
-        kwargs['env_spec'].bound_agent = bound_agent
-        kwargs['env_spec'].start_position = start_position
         self.action_space_ = None
+
+    @property
+    def resolution(self):
+        return self._resolution
+
+    @resolution.setter
+    def resolution(self, val):
+        self._resolution = val
+        self.task.resolution = val
+    
+    @property
+    def bound_agent(self):
+        return self._bound_agent
+
+    @bound_agent.setter
+    def bound_agent(self, val):
+        self._bound_agent = val
+        self.task.bound_agent = val
+
+    @property
+    def start_position(self):
+        return self._start_position
+
+    @start_position.setter
+    def start_position(self, val):
+        self._start_position = val
+        self.task.start_position = val
+
+    @property
+    def initial_blocks(self):
+        return self._initial_blocks
+
+    @initial_blocks.setter
+    def initial_blocks(self, val):
+        self._initial_blocks = val
+        self.task.initial_blocks = val
 
     @property
     def action_space(self):
@@ -84,6 +119,7 @@ class IGLUEnv(_SingleAgentEnv):
                 k: v for k, v in self.action_space_.spaces.items()
                 if k != 'fake_reset'
             })
+        
     def _init_tasks(self):
         self.spec._kwargs['env_spec'].task_monitor.tasks = self._tasks
 
@@ -167,11 +203,13 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
             self, *args, 
             iglu_evaluation=False, resolution=(64, 64), 
             start_position=(0.5, GROUND_LEVEL + 1, 0.5, 0, -90),
+            initial_blocks=None,
             bound_agent=True, ation_space='human-level', **kwargs
         ):
         self.iglu_evaluation = iglu_evaluation
         self.bound_agent = bound_agent
         self.start_position = start_position
+        self.initial_blocks = initial_blocks
         self.action_space_type = ation_space
         self.task_monitor = GridIntersectionMonitor(grid_name='build_zone')
         if iglu_evaluation:
@@ -194,7 +232,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         # TODO: randomize agent initial position here
         x, y, z, pitch, yaw = self.start_position
         return [
-            handlers.AgentStartPlacement(x=x, y=y, z=z, pitch=pitch, yaw=yaw),
+            handlers.AgentStartPlacement(x=x, y=y + GROUND_LEVEL + 1, z=z, pitch=pitch, yaw=yaw),
             handlers.InventoryAgentStart({
                 i: {'type': v, 'quantity': 20} for i, v in enumerate(block_map.values())
             })
@@ -221,9 +259,18 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         ]
 
     def create_server_decorators(self) -> List[Handler]:
+        if self.initial_blocks is not None:
+            # data format is [(x, y, z, id)]
+            blocks = '\n'.join(
+                f'<DrawBlock type="{id2block[bid]}" x="{x}" y="{GROUND_LEVEL + 1 + y}" z="{z}"/>'
+                for (x, y, z, bid) in self.initial_blocks
+            )
+        else:
+            blocks = ''
         return [
             handlers.DrawingDecorator(
                 f'<DrawCuboid type="malmomod:iglu_unbreakable_white_rn" x1="-5" y1="{GROUND_LEVEL}" z1="-5" x2="5" y2="{GROUND_LEVEL}" z2="5"/>'
+                + blocks
             )
         ]
 
