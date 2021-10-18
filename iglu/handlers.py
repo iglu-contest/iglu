@@ -259,6 +259,21 @@ class ChatObservation(handlers.TranslationHandler):
         return self.monitor.current_task.chat
 
 
+class RayObservation(handlers.TranslationHandler):
+    def __init__(self, *args, **other_kwargs):
+        super().__init__(String(), **other_kwargs)
+    def to_string(self) -> str:
+        return "ray"
+    
+    def xml_template(self) -> str:
+        return "<ObservationFromRay/>"
+    
+    def from_hero(self, x):
+        if 'LineOfSight' in x:
+            return x['LineOfSight']
+        else:
+            return {}
+
 class GridObservation(handlers.TranslationHandler):
     def to_string(self) -> str:
         return "grid"

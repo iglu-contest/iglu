@@ -21,6 +21,7 @@ from minerl_patched.env._singleagent import _SingleAgentEnv
 from .handlers import AgentPosObservation, FakeResetAction, \
                       HotBarObservation, \
                       GridObservation, \
+                      RayObservation, \
                       HotBarChoiceAction, \
                       TargetGridMonitor, \
                       CameraAction, \
@@ -291,6 +292,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
                 AgentPosObservation(),
                 handlers.CompassObservation(),
                 HotBarObservation(6),
+                RayObservation(),
                 ChatObservation(self.task_monitor),
                 GridObservation(
                     grid_name='build_zone',
