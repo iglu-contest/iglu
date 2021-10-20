@@ -4,10 +4,10 @@
 [![Downloads](https://pepy.tech/badge/iglu)](https://pepy.tech/project/iglu)
 [![PyPI version](https://badge.fury.io/py/iglu.svg)](https://badge.fury.io/py/iglu)
 
-![](./docs/source/assets/2-c116.gif)
-![](./docs/source/assets/2-c118.gif)
-![](./docs/source/assets/2-c139.gif)
-![](./docs/source/assets/2-c161.gif)
+<img src="./docs/source/assets/2-c116.gif" width="96">
+<img src="./docs/source/assets/2-c118.gif" width="96">
+<img src="./docs/source/assets/2-c139.gif" width="96">
+<img src="./docs/source/assets/2-c161.gif" width="96">
 
 IGLU is a research project aimed at bridging the gap between reinforcement learning and natural language understanding in Minecraft as a collaborative environment. It provides the RL environment where the goal of an agent is to build structures within a dedicated zone. The structures are described by natural language in the game’s chat.
 
