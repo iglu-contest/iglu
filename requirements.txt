@@ -22,3 +22,4 @@ simple-term-menu
 bullet
 minerl-patched==0.1.0
 pandas==1.1.3
+azure-storage-blob==12.9.0
