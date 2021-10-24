@@ -9,6 +9,7 @@ if os.environ.get('MINERL_ENABLE_LOG', '') == '1':
 
 import gym
 from gym import spaces
+from copy import deepcopy as copy
 from typing import List
 from minerl_patched.herobraine.env_specs.simple_embodiment import SimpleEmbodimentEnvSpec
 from minerl_patched.herobraine.hero.mc import MS_PER_STEP, INVERSE_KEYMAP
@@ -20,6 +21,7 @@ from minerl_patched.env._singleagent import _SingleAgentEnv
 from .handlers import AgentPosObservation, FakeResetAction, \
                       HotBarObservation, \
                       GridObservation, \
+                      RayObservation, \
                       HotBarChoiceAction, \
                       TargetGridMonitor, \
                       CameraAction, \
@@ -34,15 +36,60 @@ from .tasks import TaskSet, RandomTasks
 
 
 class IGLUEnv(_SingleAgentEnv):
-    def __init__(self, *args, max_steps=500, action_space='human-level', **kwargs) -> None:
+    def __init__(
+            self, *args, max_steps=500, resolution=(64, 64), 
+            start_position=(0.5, GROUND_LEVEL + 1, 0.5, 0., -90),
+            initial_blocks=None,
+            bound_agent=True, action_space='human-level', **kwargs
+        ) -> None:
         super().__init__(*args, **kwargs)
         self.action_space_type = action_space
         self._tasks = TaskSet(preset='one_task', task_id='C8')
         self.max_steps = max_steps
+        self.start_position = start_position
+        self.initial_blocks = initial_blocks
+        self.resolution = resolution
+        self.bound_agent = bound_agent
         self._should_reset_val = True
         self.counter = 0
         kwargs['env_spec'].action_space_type = action_space
         self.action_space_ = None
+
+    @property
+    def resolution(self):
+        return self._resolution
+
+    @resolution.setter
+    def resolution(self, val):
+        self._resolution = val
+        self.task.resolution = val
+    
+    @property
+    def bound_agent(self):
+        return self._bound_agent
+
+    @bound_agent.setter
+    def bound_agent(self, val):
+        self._bound_agent = val
+        self.task.bound_agent = val
+
+    @property
+    def start_position(self):
+        return self._start_position
+
+    @start_position.setter
+    def start_position(self, val):
+        self._start_position = val
+        self.task.start_position = val
+
+    @property
+    def initial_blocks(self):
+        return self._initial_blocks
+
+    @initial_blocks.setter
+    def initial_blocks(self, val):
+        self._initial_blocks = val
+        self.task.initial_blocks = val
 
     @property
     def action_space(self):
@@ -73,6 +120,7 @@ class IGLUEnv(_SingleAgentEnv):
                 k: v for k, v in self.action_space_.spaces.items()
                 if k != 'fake_reset'
             })
+        
     def _init_tasks(self):
         self.spec._kwargs['env_spec'].task_monitor.tasks = self._tasks
 
@@ -129,6 +177,8 @@ class IGLUEnv(_SingleAgentEnv):
         return obs
 
     def step(self, action):
+        # TODO: copy action
+        action = copy(action)
         action['fake_reset'] = 0
         self.counter += 1
         action = self.unflatten_action(action)
@@ -150,8 +200,17 @@ class IGLUEnv(_SingleAgentEnv):
 
 class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     ENTRYPOINT = 'iglu.env:IGLUEnv'
-    def __init__(self, *args, iglu_evaluation=False, ation_space='human-level', **kwargs):
+    def __init__(
+            self, *args, 
+            iglu_evaluation=False, resolution=(64, 64), 
+            start_position=(0.5, GROUND_LEVEL + 1, 0.5, 0, -90),
+            initial_blocks=None,
+            bound_agent=True, ation_space='human-level', **kwargs
+        ):
         self.iglu_evaluation = iglu_evaluation
+        self.bound_agent = bound_agent
+        self.start_position = start_position
+        self.initial_blocks = initial_blocks
         self.action_space_type = ation_space
         self.task_monitor = GridIntersectionMonitor(grid_name='build_zone')
         if iglu_evaluation:
@@ -159,7 +218,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         else:
             name = 'IGLUSilentBuilder-v0'
         super().__init__(name=name, *args, max_episode_steps=30000,
-                         resolution=(64, 64), **kwargs)
+                         resolution=resolution, **kwargs)
 
     def _entry_point(self, fake: bool) -> str:
         return IGLUEnvSpec.ENTRYPOINT
@@ -172,8 +231,9 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
 
     def create_agent_start(self):
         # TODO: randomize agent initial position here
+        x, y, z, pitch, yaw = self.start_position
         return [
-            handlers.AgentStartPlacement(x=0.5, y=GROUND_LEVEL + 1, z=0.5, pitch=0, yaw=-90),
+            handlers.AgentStartPlacement(x=x, y=y + GROUND_LEVEL + 1, z=z, pitch=pitch, yaw=yaw),
             handlers.InventoryAgentStart({
                 i: {'type': v, 'quantity': 20} for i, v in enumerate(block_map.values())
             })
@@ -200,9 +260,18 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         ]
 
     def create_server_decorators(self) -> List[Handler]:
+        if self.initial_blocks is not None:
+            # data format is [(x, y, z, id)]
+            blocks = '\n'.join(
+                f'<DrawBlock type="{id2block[bid]}" x="{x}" y="{GROUND_LEVEL + 1 + y}" z="{z}"/>'
+                for (x, y, z, bid) in self.initial_blocks
+            )
+        else:
+            blocks = ''
         return [
             handlers.DrawingDecorator(
                 f'<DrawCuboid type="malmomod:iglu_unbreakable_white_rn" x1="-5" y1="{GROUND_LEVEL}" z1="-5" x2="5" y2="{GROUND_LEVEL}" z2="5"/>'
+                + blocks
             )
         ]
 
@@ -223,6 +292,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
                 AgentPosObservation(),
                 handlers.CompassObservation(),
                 HotBarObservation(6),
+                RayObservation(),
                 ChatObservation(self.task_monitor),
                 GridObservation(
                     grid_name='build_zone',
@@ -299,11 +369,16 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
 
 
     def continuous_actions(self):
+        if self.bound_agent:
+            build_zone = [(-5, GROUND_LEVEL + 1, -5),
+                          (5, GROUND_LEVEL + 9, 5)]
+        else:
+            build_zone = None
+        x, y, z, _, _ = self.start_position
         return [
             ContinuousNavigationActions(
-                (0.5, GROUND_LEVEL + 1, 0.5), ground_level=GROUND_LEVEL + 1,
-                build_zone=[(-5, GROUND_LEVEL + 1, -5),
-                            (5, GROUND_LEVEL + 9, 5)]
+                (x, y, z), ground_level=GROUND_LEVEL + 1,
+                build_zone=build_zone
             ),
             CameraAction(),
             HotBarChoiceAction(6),
