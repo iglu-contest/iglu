@@ -88,7 +88,6 @@ class IGLUDataPipeline(MineRLDataPipeline):
     @staticmethod
     def _get_all_valid_recordings(path):
         path = pathlib.Path(path)
-        path = path / 'train'
         sessions = path.glob('*-c*.mp4')
         sessions = [str(s)[:-len('.mp4')] for s in sessions]
         sessions = np.array(sessions)
