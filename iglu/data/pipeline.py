@@ -45,12 +45,22 @@ class IGLUDataPipeline(MineRLDataPipeline):
         b = re.compile(r'^B:')
         dialogs = [a.sub('<Architect>', d) for d in dialogs]
         dialogs = [b.sub('<Builder>', d) for d in dialogs]
+        r = re.compile('\r')
+        dialogs = [r.sub('\n', d) for d in dialogs]
+        m = re.compile('nan$')
+        dialogs = [d for d in dialogs if m.search(d) is None]
         dialog = '\n'.join(dialogs)
         meta = {
             'dialog': np.array([dialog for _ in range(len(state['reward']))], dtype=np.object),
             'target': [session.target  for _ in range(len(state['reward']))]
         }
         return cap, state, meta
+
+    def get_file_dir(self, stream_name):
+        if '/' in stream_name:
+            return stream_name
+        else:
+            return os.path.join(self.data_dir, 'train', stream_name)
 
     @classmethod
     def postprocess_batches(cls, batches):

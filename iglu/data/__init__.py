@@ -23,7 +23,7 @@ def make(data_dir=None, num_workers=4, worker_batch_size=32, minimum_size_to_deq
     # Ensure path is setup
     if data_dir is None and 'IGLU_DATA_PATH' in os.environ:
         data_dir = os.environ['IGLU_DATA_PATH']
-    if data_dir is not None and not os.path.exists(data_dir) or True:
+    if data_dir is not None and not os.path.exists(data_dir):
         if force_download:
             print("Provided data directory does not exist: ", data_dir)
             data_dir = download(data_dir)
