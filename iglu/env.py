@@ -37,7 +37,7 @@ from .tasks import TaskSet, RandomTasks
 
 class IGLUEnv(_SingleAgentEnv):
     def __init__(
-            self, *args, max_steps=500, resolution=(64, 64), 
+            self, *args, max_steps=500, resolution=(64, 64),
             start_position=(0.5, GROUND_LEVEL + 1, 0.5, 0., -90),
             initial_blocks=None,
             bound_agent=True, action_space='human-level', **kwargs
@@ -63,7 +63,7 @@ class IGLUEnv(_SingleAgentEnv):
     def resolution(self, val):
         self._resolution = val
         self.task.resolution = val
-    
+
     @property
     def bound_agent(self):
         return self._bound_agent
@@ -109,7 +109,7 @@ class IGLUEnv(_SingleAgentEnv):
             elif self.action_space_type == 'human-level':
                 flatten_func = lambda a: (a, (lambda x: x))
             self.action_space_, self.unflatten_action = flatten_func(self.action_space_)
-            
+
         return self.action_space_
 
     @action_space.setter
@@ -120,7 +120,7 @@ class IGLUEnv(_SingleAgentEnv):
                 k: v for k, v in self.action_space_.spaces.items()
                 if k != 'fake_reset'
             })
-        
+
     def _init_tasks(self):
         self.spec._kwargs['env_spec'].task_monitor.tasks = self._tasks
 
@@ -201,8 +201,8 @@ class IGLUEnv(_SingleAgentEnv):
 class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     ENTRYPOINT = 'iglu.env:IGLUEnv'
     def __init__(
-            self, *args, 
-            iglu_evaluation=False, resolution=(64, 64), 
+            self, *args,
+            iglu_evaluation=False, resolution=(64, 64),
             start_position=(0.5, GROUND_LEVEL + 1, 0.5, 0, -90),
             initial_blocks=None,
             bound_agent=True, ation_space='human-level', **kwargs
@@ -292,7 +292,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
                 AgentPosObservation(),
                 handlers.CompassObservation(),
                 HotBarObservation(6),
-                RayObservation(),
+                #RayObservation(),
                 ChatObservation(self.task_monitor),
                 GridObservation(
                     grid_name='build_zone',
@@ -340,7 +340,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
             HotBarChoiceAction(6),
             FakeResetAction(),
         ]
-    
+
     def flatten_discrete_actions(self, action_space):
         sps = action_space.spaces
         new_space = Dict({
