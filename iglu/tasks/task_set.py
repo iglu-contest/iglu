@@ -13,7 +13,7 @@ from typing import Tuple, List
 import numpy as np
 
 from .load import download_file_from_google_drive
-from .task import Task
+from .task import Task, Tasks
 
 from ..const import block2id, id2block, block_map, \
                 BUILD_ZONE_SIZE, \
@@ -25,7 +25,7 @@ if 'IGLU_DATA_PATH' in os.environ:
 else:
     DATA_PREFIX = os.path.join(os.environ['HOME'], '.iglu', 'data')
 
-class TaskSet:
+class TaskSet(Tasks):
     ALL = {}
     def __init__(self, preset='simplest', task_id=None, update_task_dict=False):
         self._load_data(
@@ -55,6 +55,9 @@ class TaskSet:
         sample = np.random.choice(len(self.task_ids))
         self.current = self.preset[self.task_ids[sample]]
         return self.current
+
+    def set_task_obj(self, task):
+        self.current = task
 
     def set_task(self, task_id):
         self.current = self.preset[task_id]
@@ -146,6 +149,15 @@ class TaskSet:
     @staticmethod
     def subset(task_set):
         return {k: v for k, v in TaskSet.ALL.items() if k in task_set}
+
+
+class IGLUDataset:
+    def __init__(self, path=None):
+        if path is None:
+            if 'IGLU_DATA_PATH' in os.environ:
+                path = os.environ['IGLU_DATA_PATH']
+            else:
+                path = os.path.join(os.environ['HOME'], '.iglu')
 
 
 class CustomTasks(TaskSet):

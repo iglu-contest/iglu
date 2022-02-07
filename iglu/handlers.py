@@ -56,8 +56,29 @@ class FakeResetAction(Action):
     def xml_template(self) -> str:
         return str("<FakeResetCommand/>")
 
-    def __init__(self):
+    def __init__(self, start_position, initial_blocks):
+        self.start_position = start_position # x y z pitch yaw
+        x, y, z, pitch, yaw = self.start_position
+        if y < GROUND_LEVEL:
+            y += GROUND_LEVEL + 1
+        self.start_position = (x, y, z, pitch, yaw)
+        self.initial_blocks = initial_blocks # [x y z block_id]
         super().__init__('fake_reset', spaces.Discrete(2))
+
+    def to_hero(self, x):
+        if x == 1:
+            param = '1'
+            if self.start_position is not None:
+                x, y, z, pitch, yaw = self.start_position
+                param = f'{x},{y},{z},{pitch},{yaw};'
+            if self.initial_blocks is not None:
+                for x, y, z, block_id in self.initial_blocks:
+                    param += f'{x},{y + GROUND_LEVEL + 1},{z},{block_id};'
+            if param.endswith(';'):
+                param = param[:-1]
+            return f'fake_reset {param}'
+        else:
+            return super().to_hero(x)
 
 
 class ContinuousNavigationActions(Action):
@@ -342,24 +363,32 @@ class GridIntersectionMonitor(handlers.TranslationHandler):
         self.max_int = 0
         super().__init__(space=spaces.Box(low=-2, high=2, shape=()))
 
-    def reset(self):
-        self.current_task = self.tasks.sample()
-        self.prev_grid_size = 0
-        self.max_int = 0
+    def on_reset(self, grid=None):
+        # self.current_task = self.tasks.sample()
+        if grid is None:
+            self.prev_grid_size = 0
+            self.max_int = 0
+        else:
+            grid = np.transpose(grid, (0, 2, 1))
+            self.prev_grid_size = (grid != 0).sum().item()
+            self.max_int = self.current_task.maximal_intersection(grid)
+        
+    def set_task_obj(self, task):
+        self.tasks.set_task_obj(task)
+        self.current_task = task
 
     def set_task(self, task_id):
         self.current_task = self.tasks.set_task(task_id)
-        self.prev_grid_size = 0
-        self.max_int = 0
 
     def from_hero(self, x):
         blocks = x[self.grid_name]
         blocks_id = np.array([block_short2id.get(block, -1) for block in blocks])
         grid = blocks_id.reshape(*BUILD_ZONE_SIZE)
+        grid = np.transpose(grid, (0, 2, 1))
         grid_size = (grid != 0).sum().item()
         wrong_placement = (self.prev_grid_size - grid_size) * self.wrong_scale
         max_int = self.current_task.maximal_intersection(grid) if wrong_placement != 0 else self.max_int
-        done = max_int == self.current_task.target_size
+        done = max_int == self.current_task.target_size and grid_size == max_int
         self.prev_grid_size = grid_size
         right_placement = (max_int - self.max_int) * self.right_scale
         self.max_int = max_int

@@ -38,8 +38,10 @@ from .tasks import TaskSet, RandomTasks
 class IGLUEnv(_SingleAgentEnv):
     def __init__(
             self, *args, max_steps=500, resolution=(64, 64),
-            start_position=(0.5, GROUND_LEVEL + 1, 0.5, 0., -90),
+            start_position=(0.5, 0, 0.5, 0., -90),
             initial_blocks=None,
+            wrong_placement_scale=1,
+            right_placement_scale=2,
             bound_agent=True, action_space='human-level', **kwargs
         ) -> None:
         super().__init__(*args, **kwargs)
@@ -47,12 +49,14 @@ class IGLUEnv(_SingleAgentEnv):
         self._tasks = TaskSet(preset='one_task', task_id='C8')
         self.max_steps = max_steps
         self.start_position = start_position
-        self.initial_blocks = initial_blocks
+        self._initial_blocks = initial_blocks
         self.resolution = resolution
         self.bound_agent = bound_agent
         self._should_reset_val = True
         self.counter = 0
         kwargs['env_spec'].action_space_type = action_space
+        kwargs['env_spec'].task_monitor.wrong_scale = wrong_placement_scale
+        kwargs['env_spec'].task_monitor.right_scale = right_placement_scale
         self.action_space_ = None
 
     @property
@@ -86,10 +90,24 @@ class IGLUEnv(_SingleAgentEnv):
     def initial_blocks(self):
         return self._initial_blocks
 
+    def set_start_position(self, val):
+        x, y, z, pitch, yaw = val
+        y += GROUND_LEVEL + 1
+        val = (x, y, z, pitch, yaw)
+        self._start_position = val
+        self.task.start_position = val
+        self.task.fake_reset_handler.start_position = val
+
     @initial_blocks.setter
     def initial_blocks(self, val):
         self._initial_blocks = val
         self.task.initial_blocks = val
+        self.task.fake_reset_handler.initial_blocks = val
+
+    def set_initial_blocks(self, val):
+        self._initial_blocks = val
+        self.task.initial_blocks = val
+        self.task.fake_reset_handler.initial_blocks = val
 
     @property
     def action_space(self):
@@ -151,6 +169,16 @@ class IGLUEnv(_SingleAgentEnv):
     def reset(self):
         self.counter = 0
         self._init_tasks()
+        current_task = self._tasks.sample()
+        self.task.task_monitor.set_task_obj(current_task)
+        if current_task.starting_grid is not None:
+            # idx = current_task.starting_grid.nonzero()
+            # types = [current_task.starting_grid[i] for i in zip(*idx)]
+            # blocks = [(*i, t) for i, t in zip(idx, types)]
+            blocks = current_task.starting_grid
+            self.set_initial_blocks(blocks)
+        else:
+            self.set_initial_blocks([])
         if self._should_reset or os.environ.get('IGLU_DISABLE_FAKE_RESET', '0') == '1':
             obs = self.real_reset()
         else:
@@ -166,7 +194,7 @@ class IGLUEnv(_SingleAgentEnv):
                     return self.real_reset()
             if done:
                 return self.real_reset()
-        self.spec._kwargs['env_spec'].task_monitor.reset()
+        self.task.task_monitor.on_reset(obs['grid'])
         return obs
 
     def real_reset(self):
@@ -203,8 +231,10 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     def __init__(
             self, *args,
             iglu_evaluation=False, resolution=(64, 64),
-            start_position=(0.5, GROUND_LEVEL + 1, 0.5, 0, -90),
+            start_position=(0.5, 0, 0.5, 0, -90),
             initial_blocks=None,
+            wrong_placement_scale=1,
+            right_placement_scale=2,
             bound_agent=True, ation_space='human-level', **kwargs
         ):
         self.iglu_evaluation = iglu_evaluation
@@ -212,7 +242,11 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         self.start_position = start_position
         self.initial_blocks = initial_blocks
         self.action_space_type = ation_space
-        self.task_monitor = GridIntersectionMonitor(grid_name='build_zone')
+        self.fake_reset_handler = None
+        self.task_monitor = GridIntersectionMonitor(
+            grid_name='build_zone', wrong_placement_reward_scale=wrong_placement_scale,
+            right_placement_reward_scale=right_placement_scale
+        )
         if iglu_evaluation:
             name = 'IGLUSilentBuilderVisual-v0'
         else:
@@ -226,16 +260,31 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
     def is_from_folder(self, folder: str) -> bool:
         return False
 
+    def set_initial_blocks(self, initial_blocks):
+        self.fake_reset_handler.initial_blocks = initial_blocks
+        self.initial_blocks = initial_blocks
+
+    def set_start_position(self, start_position):
+        x, y, z, pitch, yaw = start_position
+        y += GROUND_LEVEL + 1
+        start_position = (x, y, z, pitch, yaw)
+        self.start_position = start_position
+        self.fake_reset_handler.start_position = start_position
+
     def create_agent_mode(self):
         return "Creative" if self.action_space_type == 'continuous' else "Survival"
 
     def create_agent_start(self):
         # TODO: randomize agent initial position here
         x, y, z, pitch, yaw = self.start_position
+        cnts = [20, 20, 20, 20, 20, 20]
+        if self.initial_blocks is not None:
+            for block in self.initial_blocks:
+                cnts[block[3] - 1] -= 1
         return [
             handlers.AgentStartPlacement(x=x, y=y + GROUND_LEVEL + 1, z=z, pitch=pitch, yaw=yaw),
             handlers.InventoryAgentStart({
-                i: {'type': v, 'quantity': 20} for i, v in enumerate(block_map.values())
+                i: {'type': v, 'quantity': cnts[i]} for i, v in enumerate(block_map.values())
             })
         ]
 
@@ -314,7 +363,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
             ]
 
     def create_monitors(self):
-        self.task_monitor.reset()
+        self.task_monitor.on_reset()
         monitors = [
             self.task_monitor,
         ]
@@ -334,11 +383,12 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         discrete = DiscreteNavigationActions(movement=True, camera=False, placement=True)
         camera = CameraAction()
         discrete.camera_commands = camera
+        self.fake_reset_handler = FakeResetAction(self.start_position, self.initial_blocks)
         return [
             discrete,
             camera,
             HotBarChoiceAction(6),
-            FakeResetAction(),
+            self.fake_reset_handler,
         ]
 
     def flatten_discrete_actions(self, action_space):
@@ -375,6 +425,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
         else:
             build_zone = None
         x, y, z, _, _ = self.start_position
+        self.fake_reset_handler = FakeResetAction(self.start_position, self.initial_blocks)
         return [
             ContinuousNavigationActions(
                 (x, y, z), ground_level=GROUND_LEVEL + 1,
@@ -383,7 +434,7 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
             CameraAction(),
             HotBarChoiceAction(6),
             DiscreteNavigationActions(movement=False, camera=False, placement=True, custom_name='placing'),
-            FakeResetAction(),
+            self.fake_reset_handler,
         ]
 
     def flatten_continuous_actions(self, action_space):
@@ -421,13 +472,14 @@ class IGLUEnvSpec(SimpleEmbodimentEnvSpec):
             "attack",
             "use"
         ]
+        self.fake_reset_handler = FakeResetAction(self.start_position, self.initial_blocks)
         return [
             handlers.KeybasedCommandAction(k, v) for k, v in INVERSE_KEYMAP.items()
             if k in SIMPLE_KEYBOARD_ACTION
         ] + [
             handlers.CameraAction(),
             HotBarChoiceAction(6),
-            FakeResetAction(),
+            self.fake_reset_handler,
         ]
 
     def determine_success_from_rewards(self, rewards: list) -> bool:
