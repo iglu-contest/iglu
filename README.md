@@ -1,5 +1,6 @@
 # Iglu Environment
 
+**THIS ENVIRONMENT IS NO LONGER SUPPORTED FOR THE IGLU COMPETITION, FOR IGLU 2022, PLEASE USE THE [GRIDWORLD](https://github.com/iglu-contest/gridworld/) ENVIRONMENT**
 
 [![Downloads](https://pepy.tech/badge/iglu)](https://pepy.tech/project/iglu)
 [![PyPI version](https://badge.fury.io/py/iglu.svg)](https://badge.fury.io/py/iglu)
